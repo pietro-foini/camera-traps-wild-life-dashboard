@@ -3,7 +3,7 @@ from pathlib import Path
 import dash
 import dash_ag_grid as dag
 import dash_mantine_components as dmc
-from dash import Input, Output, callback, dcc, html
+from dash import Input, Output, State, callback, dcc, html
 from dash.exceptions import PreventUpdate
 
 from camera_traps.data import Classes
@@ -26,7 +26,7 @@ layout = dmc.Container(
                         color="var(--primary)",
                         type="circle",
                         children=dag.AgGrid(
-                            id="archive-grid",
+                            id="prediction-table",
                             rowData=[],
                             columnDefs=[
                                 {
@@ -57,10 +57,7 @@ layout = dmc.Container(
                             ],
                             style={"height": "80vh", "width": "100%"},
                             defaultColDef={"flex": 1, "filter": True},
-                            dashGridOptions={
-                                "rowSelection": {"mode": "singleRow"},
-                                "tooltipShowDelay": 200,
-                            },
+                            dashGridOptions={"rowSelection": {"mode": "singleRow"}, "tooltipShowDelay": 20},
                         ),
                     ),
                 ),
@@ -87,39 +84,77 @@ layout = dmc.Container(
                                     },
                                     children=[
                                         dag.AgGrid(
-                                            id="validation-grid",
+                                            id="validation-table",
                                             rowData=[],
                                             columnDefs=[
                                                 {
+                                                    "headerName": "",
+                                                    "colId": "delete",
+                                                    "cellRenderer": "DeleteButton",
+                                                    "lockPosition": "left",
+                                                    "maxWidth": 35,
+                                                    "filter": False,
+                                                    "cellStyle": {"paddingRight": 0, "paddingLeft": 0},
+                                                },
+                                                {
                                                     "field": "tracker_id",
                                                     "headerName": "Tracker ID",
+                                                    "headerTooltip": "Tracker ID referring to the individual in the video. It cannot be edited. If not true, set Label to None_of_the_above.",
                                                     "editable": False,
-                                                    "maxWidth": 150,
+                                                    "width": 110,
                                                 },
                                                 {
                                                     "field": "label",
                                                     "headerName": "Label",
+                                                    "headerTooltip": "Label associated to the individual in the video. It can be edited.",
                                                     "editable": True,
+                                                    "width": 180,
                                                     "cellEditor": "agSelectCellEditor",
                                                     "cellEditorParams": {
                                                         "values": [c.value for c in Classes],
+                                                        "valueListMaxHeight": 120,
+                                                        "valueListMaxWidth": 180,
                                                     },
                                                 },
+                                                {
+                                                    "field": "comments",
+                                                    "headerName": "Comments",
+                                                    "headerTooltip": "Leave an optional comment.",
+                                                    "editable": True,
+                                                    "cellEditorPopup": True,
+                                                    "cellEditor": "agLargeTextCellEditor",
+                                                    "flex": 1,
+                                                },
                                             ],
-                                            defaultColDef={"flex": 1},
+                                            defaultColDef={},
                                             dashGridOptions={
                                                 "singleClickEdit": True,
                                                 "stopEditingWhenCellsLoseFocus": True,
+                                                "rowHeight": 40,
+                                                "suppressScrollOnNewData": True,
+                                                "tooltipShowDelay": 20,
                                             },
-                                            style={"flex": 1, "width": "100%"},
+                                            style={"height": "38vh", "width": "100%"},
                                         ),
                                         dmc.Group(
                                             justify="flex-start",
                                             children=[
-                                                dmc.Button(
-                                                    children="Save validation",
-                                                    id="save-validation-btn",
-                                                )
+                                                dmc.Group(
+                                                    justify="space-between",
+                                                    children=[
+                                                        dmc.Button(
+                                                            children="+",
+                                                            id="add-fn-btn",
+                                                            variant="light",
+                                                            disabled=True,
+                                                        ),
+                                                        dmc.Button(
+                                                            children="Save validation",
+                                                            id="save-validation-btn",
+                                                            disabled=True,
+                                                        ),
+                                                    ],
+                                                ),
                                             ],
                                         ),
                                     ],
@@ -134,11 +169,11 @@ layout = dmc.Container(
 )
 
 
-@callback(Output("archive-grid", "rowData"), Input("date-range-picker", "value"))
-def update_table(date_range: None | list[str | None]):
-    """Update table"""
+@callback(Output("prediction-table", "rowData"), Input("date-range-picker", "value"))
+def update_table(date_range: list[str | None]):
+    """Update table containing the video predictions that need to be validated"""
 
-    if not date_range or not date_range[0] or not date_range[1]:
+    if not date_range[0] or not date_range[1]:
         raise PreventUpdate
 
     params = {"start_date": date_range[0], "end_date": date_range[1]}
@@ -149,7 +184,7 @@ def update_table(date_range: None | list[str | None]):
 
 @callback(
     Output("video-container", "children"),
-    Input("archive-grid", "selectedRows"),
+    Input("prediction-table", "selectedRows"),
 )
 def display_video(selected_rows: list[dict]):
     """Load the selected video"""
@@ -157,10 +192,8 @@ def display_video(selected_rows: list[dict]):
     if not selected_rows:
         return dmc.Center(children="Select a record to visualize video", h="100%", c="dimmed")
 
-    filename = Path(selected_rows[0]["filename"]).name
-
     return html.Video(
-        src=f"{S.S3_ENDPOINT_URL}/buckets/bucket-cameratraps/output/{filename}",
+        src=f"{S.S3_ENDPOINT_URL}/buckets/bucket-cameratraps/output/{Path(selected_rows[0]['filename']).name}",
         controls=True,
         autoPlay=True,
         style={
@@ -174,48 +207,105 @@ def display_video(selected_rows: list[dict]):
 
 
 @callback(
-    Output("validation-grid", "rowData"),
-    Input("archive-grid", "selectedRows"),
+    Output("validation-table", "rowData"),
+    Output("add-fn-btn", "disabled"),
+    Output("save-validation-btn", "disabled"),
+    Input("prediction-table", "selectedRows"),
 )
-def display_validation(selected_rows: list[dict]):
-    """Load trackers data for the selected video"""
+def display_predictions(selected_rows: list[dict]):
+    """Load predicted trackers data for the selected video"""
 
     if not selected_rows:
-        return []
+        return [], True, True
 
     params = {"video_id": selected_rows[0]["id"]}
     df = db.run_sql_file("get_trackers.sql", parameters=params)
+    records = df.to_dict("records")
 
-    return df.to_dict("records")
+    return records, False, len(records) == 0
 
 
-# @callback(
-#     Output("archive-grid", "rowData", allow_duplicate=True),
-#     Input("save-validation-btn", "n_clicks"),
-#     State("validation-grid", "rowData"),
-#     State("date-range-picker", "value"),
-#     prevent_initial_call=True,
-# )
-# def save_validation(n_clicks, validation_rows, date_range):
-#     """Save updated labels to DB when button is clicked"""
-#     if not n_clicks or not validation_rows:
-#         raise PreventUpdate
-#
-#     # Aggiorna ogni tracker del video
-#     for row in validation_rows:
-#         db.execute_query(
-#             """
-#             UPDATE video_outputs
-#             SET label = :label
-#             WHERE video_input_id = :video_id
-#               AND tracker_id = :tracker_id
-#             """,
-#             parameters={
-#                 "label": row["label"],
-#                 "video_id": row["video_input_id"],
-#                 "tracker_id": row["tracker_id"],
-#             },
-#         )
-#
-#     # Ricarica i dati della tabella principale a sinistra per mostrare le nuove label
-#     return update_datatable(date_range)
+@callback(
+    Output("validation-table", "rowData", allow_duplicate=True),
+    Output("save-validation-btn", "disabled", allow_duplicate=True),
+    Input("add-fn-btn", "n_clicks"),
+    State("validation-table", "rowData"),
+    State("prediction-table", "selectedRows"),
+    prevent_initial_call=True,
+)
+def add_manual_row(n_clicks: int, current_rows: list[dict], selected_video: list[dict]):
+    """Add a manual row"""
+
+    if not n_clicks or not selected_video:
+        raise PreventUpdate
+
+    current_rows = current_rows or []
+    default_label = next(iter(Classes)).value
+
+    current_rows.append(
+        {
+            "tracker_id": None,
+            "label": default_label,
+            "original_label": None,
+        }
+    )
+
+    return current_rows, False
+
+
+@callback(
+    Output("validation-table", "rowData", allow_duplicate=True),
+    Output("save-validation-btn", "disabled", allow_duplicate=True),
+    Input("validation-table", "cellClicked"),
+    State("validation-table", "rowData"),
+    prevent_initial_call=True,
+)
+def remove_manual_row(cell, current_rows):
+    """Sync rowData when a manual row is deleted"""
+
+    if not cell or cell.get("colId") != "delete":
+        raise PreventUpdate
+
+    row_index = cell.get("rowIndex")
+    if row_index is None or current_rows[row_index].get("tracker_id") is not None:
+        raise PreventUpdate
+
+    current_rows.pop(row_index)
+    return current_rows, len(current_rows) == 0
+
+
+@callback(
+    Output("prediction-table", "rowData", allow_duplicate=True),
+    Output("validation-table", "rowData", allow_duplicate=True),
+    Input("save-validation-btn", "n_clicks"),
+    State("validation-table", "rowData"),
+    State("prediction-table", "selectedRows"),
+    State("date-range-picker", "value"),
+    prevent_initial_call=True,
+)
+def save_validation(
+    n_clicks: int,
+    validation_rows: list[dict],
+    selected_video: list[dict],
+    date_range: list[str | None],
+):
+    """Save updated labels to the database"""
+
+    if not n_clicks or not validation_rows or not selected_video:
+        raise PreventUpdate
+
+    params = [
+        {
+            "video_input_id": selected_video[0]["id"],
+            "tracker_id": row.get("tracker_id"),
+            "label": row["label"],
+            "comments": row.get("comments"),
+            "is_modified": (row.get("tracker_id") is None) or (row["label"] != row.get("original_label")),
+            "validated_by": "admin",
+        }
+        for row in validation_rows
+    ]
+
+    db.execute_sql_file("insert_video_validations.sql", parameters=params)
+
+    return update_table(date_range), []

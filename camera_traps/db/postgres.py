@@ -46,3 +46,16 @@ class PostgresHandler:
         sql_path = SCRIPTS_DIR / filename
         query = sql_path.read_text(encoding="utf-8")
         return self.run_query(query, parameters=parameters)
+
+    def execute_query(self, query: str, parameters: dict | list[dict] | None = None) -> None:
+        """Execute INSERT, UPDATE, or DELETE queries and commit transaction."""
+
+        with self.engine.begin() as conn:
+            conn.execute(sqlalchemy.text(query), parameters)
+
+    def execute_sql_file(self, filename: str, parameters: dict | list[dict] | None = None) -> None:
+        """Execute SQL file (INSERT/UPDATE/DELETE) and commit transaction."""
+
+        sql_path = SCRIPTS_DIR / filename
+        query = sql_path.read_text(encoding="utf-8")
+        self.execute_query(query, parameters=parameters)

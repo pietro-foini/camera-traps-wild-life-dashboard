@@ -1,5 +1,8 @@
-SELECT DISTINCT video_input_id, tracker_id, label
+SELECT
+    tracker_id,
+    MODE() WITHIN GROUP (ORDER BY label) AS label,
+    MODE() WITHIN GROUP (ORDER BY label) AS original_label
 FROM video_outputs
-WHERE TRUE
-    AND video_input_id = :video_id
-ORDER BY tracker_id
+WHERE video_input_id = :video_id
+GROUP BY tracker_id
+ORDER BY tracker_id;
