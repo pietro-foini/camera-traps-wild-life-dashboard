@@ -1,0 +1,34 @@
+:root {
+    --primary: #2E6F40;
+    --primary-light: #eaf4ed;
+    --primary-hover: #f4faf6;
+}
+
+.ag-theme-alpine,
+.ag-theme-quartz,
+.ag-root-wrapper {
+    --ag-active-color: var(--primary) !important;
+    --ag-alpine-active-color: var(--primary) !important;
+    --ag-accent-color: var(--primary) !important;
+    --ag-input-focus-border-color: var(--primary) !important;
+    --ag-range-selection-border-color: var(--primary) !important;
+
+    --ag-selected-row-background-color: var(--primary-light) !important;
+    --ag-row-hover-color: var(--primary-hover) !important;
+
+    --ag-font-family: 'Inter', sans-serif !important;
+}
+
+.nav-header-link,
+.nav-header-link .mantine-NavLink-label {
+    color: white !important;
+}
+
+.nav-header-link:hover {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.nav-header-link[data-active="true"] {
+    background-color: #1c4527 !important;
+    font-weight: 600;
+}
