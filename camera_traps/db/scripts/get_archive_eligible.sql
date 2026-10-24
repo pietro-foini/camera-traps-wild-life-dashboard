@@ -4,7 +4,7 @@ SELECT
     COALESCE(opt.trackers, 0) AS trackers,
     COALESCE(opt.species, 0) AS species,
     COALESCE(opt.labels, '{}') AS labels,
-    ipt.created_at AS date
+    ipt.created_at AT TIME ZONE 'Europe/Rome' AS date
 FROM video_inputs AS ipt
 LEFT JOIN (
     SELECT
