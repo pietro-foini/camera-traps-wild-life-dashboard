@@ -6,6 +6,7 @@ WITH tracker_lengths AS (
     FROM video_outputs
     GROUP BY video_input_id, tracker_id
 )
+
 SELECT
     vv.label AS species,
     tl.num_frames

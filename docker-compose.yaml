@@ -1,0 +1,21 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: camera_traps_dashboard_app
+    restart: always
+    ports:
+      - "8050:8050"
+    env_file:
+      - ${ENV_FILE:-.env}
+    environment:
+      - DB_HOST=postgres_db
+      - DB_PORT=5432
+      - S3_ENDPOINT_URL=http://localhost:8888
+    networks:
+      - camera_traps_net
+
+networks:
+  camera_traps_net:
+    external: true
