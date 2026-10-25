@@ -144,6 +144,8 @@ layout = dmc.Container(
                                 style={"height": "100%"},
                                 children=dmc.Stack(
                                     gap="xs",
+                                    justify="space-between",
+                                    style={"height": "100%"},
                                     children=[
                                         dmc.Text(children="Video processing status", size="lg", fw=400, ta="center"),
                                         dcc.Loading(
@@ -152,7 +154,18 @@ layout = dmc.Container(
                                             children=dcc.Graph(
                                                 id="status-chart",
                                                 config=GRAPH_CONFIG,
-                                                style={"height": "44vh", "width": "100%"},
+                                                style={"height": "18.5vh", "width": "100%"},
+                                            ),
+                                        ),
+                                        dmc.Divider(variant="solid"),
+                                        dmc.Text(children="Computational timing", size="lg", fw=400, ta="center"),
+                                        dcc.Loading(
+                                            color="var(--primary)",
+                                            type="circle",
+                                            children=dcc.Graph(
+                                                id="computational-timing",
+                                                config=GRAPH_CONFIG,
+                                                style={"height": "18.5vh", "width": "100%"},
                                             ),
                                         ),
                                     ],
@@ -191,31 +204,7 @@ layout = dmc.Container(
                     gutter="md",
                     children=[
                         dmc.GridCol(
-                            span=3,
-                            children=dmc.Paper(
-                                withBorder=True,
-                                radius="md",
-                                p="md",
-                                style={"height": "36vh"},
-                                children=dmc.Stack(
-                                    gap="xs",
-                                    children=[
-                                        dmc.Text(children="Computational timing", size="lg", fw=400, ta="center"),
-                                        dcc.Loading(
-                                            color="var(--primary)",
-                                            type="circle",
-                                            children=dcc.Graph(
-                                                id="computational-timing",
-                                                config=GRAPH_CONFIG,
-                                                style={"height": "30vh", "width": "100%"},
-                                            ),
-                                        ),
-                                    ],
-                                ),
-                            ),
-                        ),
-                        dmc.GridCol(
-                            span=4,
+                            span=6,
                             children=dmc.Paper(
                                 withBorder=True,
                                 radius="md",
@@ -239,7 +228,7 @@ layout = dmc.Container(
                             ),
                         ),
                         dmc.GridCol(
-                            span=5,
+                            span=6,
                             children=dmc.Paper(
                                 withBorder=True,
                                 radius="md",
@@ -377,15 +366,62 @@ def update_status_chart(date_range: list[str | None], sites: list[str]):
         "<extra></extra>",
     )
     fig.update_layout(
-        margin=dict(l=20, r=20, t=20, b=20),
+        margin=dict(l=10, r=10, t=15, b=15),
         legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=-0.15,
-            xanchor="center",
-            x=0.5,
+            orientation="v",
+            yanchor="middle",
+            y=0.5,
+            xanchor="right",
+            x=0,
             title_text="",
         ),
+        autosize=True,
+    )
+
+    return fig
+
+
+@callback(
+    Output("computational-timing", "figure"),
+    Input("date-range-picker", "value"),
+    Input("site-filter", "value"),
+)
+def update_computational_timing(date_range: list[str | None], sites: list[str]):
+    """Display horizontal box plot of queue and processing times"""
+
+    if not date_range[0] or not date_range[1]:
+        raise PreventUpdate
+
+    # Retrieve data.
+    params = {"start_date": date_range[0], "end_date": date_range[1], "sites": sites if sites else None}
+    df_timing = db.run_sql_file("get_computational_timing.sql", parameters=params)
+    df_melted = df_timing.melt(
+        value_vars=["queue_time", "processing_time"],
+        var_name="phase",
+        value_name="seconds",
+    ).replace({"queue_time": "Queue", "processing_time": "Processing"})
+
+    # Create figure.
+    fig = px.box(
+        df_melted,
+        x="seconds",
+        y="phase",
+        color="phase",
+        orientation="h",
+        points="outliers",
+        color_discrete_sequence=pio.templates[pio.templates.default].layout.colorway[1:],
+    )
+    fig.update_traces(
+        opacity=0.75,
+        name="",
+    )
+    fig.update_layout(
+        showlegend=False,
+        hovermode="y unified",
+        hoverlabel=dict(bgcolor="rgba(255, 255, 255, 0.9)"),
+        xaxis=dict(title="Time (s)", hoverformat=".1f"),
+        yaxis=dict(title=""),
+        margin=dict(l=20, r=20, t=10, b=20),
         autosize=True,
     )
 
