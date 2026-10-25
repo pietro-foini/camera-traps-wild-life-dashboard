@@ -7,6 +7,7 @@ import plotly.io as pio
 from dash import Input, Output, callback, dcc, html
 from dash.exceptions import PreventUpdate
 
+from camera_traps.api.components import create_card
 from camera_traps.api.config import CONTINUOUS_SCALE, GRAPH_CONFIG
 from camera_traps.db.config import db
 from camera_traps.settings import SITES, S
@@ -33,71 +34,9 @@ layout = dmc.Container(
                                         cols=3,
                                         spacing="md",
                                         children=[
-                                            dmc.Card(
-                                                withBorder=True,
-                                                radius="md",
-                                                shadow="sm",
-                                                p="md",
-                                                style={
-                                                    "backgroundImage": "linear-gradient(135deg, transparent 55%, #48986026 100%)",
-                                                    "borderLeft": "4px solid #2E6F40",
-                                                },
-                                                children=[
-                                                    dmc.Text(
-                                                        children="Total videos", size="xs", fw=400, tt="uppercase"
-                                                    ),
-                                                    dmc.Text(
-                                                        children="—", id="kpi-total-videos", size="xl", fw=700, mt="xs"
-                                                    ),
-                                                ],
-                                            ),
-                                            dmc.Card(
-                                                withBorder=True,
-                                                radius="md",
-                                                shadow="sm",
-                                                p="md",
-                                                style={
-                                                    "backgroundImage": "linear-gradient(135deg, transparent 55%, #48986026 100%)",
-                                                    "borderLeft": "4px solid #2E6F40",
-                                                },
-                                                children=[
-                                                    dmc.Text(
-                                                        children="Tracked individuals",
-                                                        size="xs",
-                                                        fw=400,
-                                                        tt="uppercase",
-                                                    ),
-                                                    dmc.Text(
-                                                        children="—",
-                                                        id="kpi-tracked-individuals",
-                                                        size="xl",
-                                                        fw=700,
-                                                        mt="xs",
-                                                    ),
-                                                ],
-                                            ),
-                                            dmc.Card(
-                                                withBorder=True,
-                                                radius="md",
-                                                shadow="sm",
-                                                p="md",
-                                                style={
-                                                    "backgroundImage": "linear-gradient(135deg, transparent 55%, #48986026 100%)",
-                                                    "borderLeft": "4px solid #2E6F40",
-                                                },
-                                                children=[
-                                                    dmc.Text(
-                                                        children="Detected species", size="xs", fw=400, tt="uppercase"
-                                                    ),
-                                                    dmc.Text(
-                                                        children="—",
-                                                        id="kpi-detected-species",
-                                                        size="xl",
-                                                        fw=700,
-                                                        mt="xs",
-                                                    ),
-                                                ],
-                                            ),
+                                            create_card(id="kpi-total-videos", title="Total videos"),
+                                            create_card(id="kpi-total-tracks", title="Total tracks"),
+                                            create_card(id="kpi-total-species", title="Total species"),
                                         ],
                                     ),
                                     dmc.Paper(
@@ -147,7 +86,7 @@ layout = dmc.Container(
                                     justify="space-between",
                                     style={"height": "100%"},
                                     children=[
-                                        dmc.Text(children="Video processing status", size="lg", fw=400, ta="center"),
+                                        dmc.Text(children="Processing status", size="lg", fw=400, ta="center"),
                                         dcc.Loading(
                                             color="var(--primary)",
                                             type="circle",
@@ -182,9 +121,7 @@ layout = dmc.Container(
                                 children=dmc.Stack(
                                     gap="xs",
                                     children=[
-                                        dmc.Text(
-                                            children="Detected species distribution", size="lg", fw=400, ta="center"
-                                        ),
+                                        dmc.Text(children="Species distribution", size="lg", fw=400, ta="center"),
                                         dcc.Loading(
                                             color="var(--primary)",
                                             type="circle",
@@ -213,7 +150,7 @@ layout = dmc.Container(
                                 children=dmc.Stack(
                                     gap="xs",
                                     children=[
-                                        dmc.Text(children="Daily individuals tracking", size="lg", fw=400, ta="center"),
+                                        dmc.Text(children="Daily tracks flow", size="lg", fw=400, ta="center"),
                                         dcc.Loading(
                                             color="var(--primary)",
                                             type="circle",
@@ -237,7 +174,7 @@ layout = dmc.Container(
                                 children=dmc.Stack(
                                     gap="xs",
                                     children=[
-                                        dmc.Text(children="Hourly tracking heatmap", size="lg", fw=400, ta="center"),
+                                        dmc.Text(children="Hourly tracks distribution", size="lg", fw=400, ta="center"),
                                         dcc.Loading(
                                             color="var(--primary)",
                                             type="circle",
@@ -261,8 +198,8 @@ layout = dmc.Container(
 
 @callback(
     Output("kpi-total-videos", "children"),
-    Output("kpi-tracked-individuals", "children"),
-    Output("kpi-detected-species", "children"),
+    Output("kpi-total-tracks", "children"),
+    Output("kpi-total-species", "children"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
 )
@@ -274,12 +211,12 @@ def update_kpi(date_range: list[str | None], sites: list[str]):
 
     # Retrieve data.
     params = {"start_date": date_range[0], "end_date": date_range[1], "sites": sites if sites else None}
-    df_kpi = db.run_sql_file("get_kpi.sql", parameters=params)
+    df_kpi = db.run_sql_file("home/get_kpi.sql", parameters=params)
 
     return (
         f"{df_kpi['total_videos'].sum():,.0f}",
-        f"{df_kpi['tracked_individuals'].sum():,.0f}",
-        f"{df_kpi['detected_species'].sum():,.0f}",
+        f"{df_kpi['total_tracks'].sum():,.0f}",
+        f"{df_kpi['total_species'].sum():,.0f}",
     )
 
 
@@ -298,7 +235,7 @@ def update_map(date_range: list[str | None], theme: str, sites: list[str]):
 
     # Retrieve data.
     params = {"start_date": date_range[0], "end_date": date_range[1], "sites": sites if sites else None}
-    df_kpi = db.run_sql_file("get_kpi.sql", parameters=params)
+    df_kpi = db.run_sql_file("home/get_kpi.sql", parameters=params)
     df_location = pd.DataFrame.from_dict(SITES, orient="index").reset_index(names="site")
     df_trap = pd.merge(df_location, df_kpi, on="site", how="right")
 
@@ -307,15 +244,15 @@ def update_map(date_range: list[str | None], theme: str, sites: list[str]):
         df_trap,
         lat="lat",
         lon="lon",
-        custom_data=["name", "total_videos", "tracked_individuals", "detected_species"],
+        custom_data=["name", "total_videos", "total_tracks", "total_species"],
     )
     fig.update_traces(
         marker=dict(size=14, color="#2E6F40", opacity=0.9),
         hovertemplate=(
             "<b>%{customdata[0]}</b><br><br>"
-            "Total videos: <b>%{customdata[1]}</b><br>"
-            "Tracked individuals: <b>%{customdata[2]}</b><br>"
-            "Detected species: <b>%{customdata[3]}</b>"
+            "<b>Total videos</b>: %{customdata[1]}<br>"
+            "<b>Tracked individuals</b>: %{customdata[2]}<<br>"
+            "<b>Detected species</b>: %{customdata[3]}"
             "<extra></extra>"
         ),
     )
@@ -348,7 +285,7 @@ def update_status_chart(date_range: list[str | None], sites: list[str]):
 
     # Retrieve data.
     params = {"start_date": date_range[0], "end_date": date_range[1], "sites": sites if sites else None}
-    df_status = db.run_sql_file("get_status.sql", parameters=params)
+    df_status = db.run_sql_file("home/get_status.sql", parameters=params)
 
     # Create figure.
     fig = px.pie(
@@ -394,12 +331,12 @@ def update_computational_timing(date_range: list[str | None], sites: list[str]):
 
     # Retrieve data.
     params = {"start_date": date_range[0], "end_date": date_range[1], "sites": sites if sites else None}
-    df_timing = db.run_sql_file("get_computational_timing.sql", parameters=params)
+    df_timing = db.run_sql_file("home/get_computational_timing.sql", parameters=params)
     df_melted = df_timing.melt(
         value_vars=["queue_time", "processing_time"],
         var_name="phase",
         value_name="seconds",
-    ).replace({"queue_time": "Queue", "processing_time": "Processing"})
+    ).replace({"queue_time": "Queue", "processing_time": "Execution"})
 
     # Create figure.
     fig = px.box(
@@ -441,7 +378,7 @@ def update_species_histogram(date_range: list[str | None], sites: list[str]):
 
     # Retrieve data.
     params = {"start_date": date_range[0], "end_date": date_range[1], "sites": sites if sites else None}
-    df_species = db.run_sql_file("get_species.sql", parameters=params)
+    df_species = db.run_sql_file("home/get_species.sql", parameters=params)
 
     # Create figure.
     fig = px.bar(
@@ -451,11 +388,10 @@ def update_species_histogram(date_range: list[str | None], sites: list[str]):
         color="site",
         orientation="h",
     )
-    fig.update_traces(
-        hovertemplate="<b>Species</b>: %{y}<br>" "<b>N° of tracked individuals</b>: %{x}<br>" "<extra></extra>"
-    )
+    fig.update_traces(hovertemplate="<b>Species</b>: %{y}<br>" "<b>N° of tracks</b>: %{x}<br>" "<extra></extra>")
     fig.update_layout(
-        xaxis=dict(title="Number of tracked individuals"),
+        legend=dict(title_text=""),
+        xaxis=dict(title="Number of tracks"),
         yaxis=dict(title="Species"),
         margin=dict(l=20, r=20, t=20, b=20),
         autosize=True,
@@ -477,7 +413,7 @@ def update_daily_sightings(date_range: list[str | None], sites: list[str]):
 
     # Retrieve data.
     params = {"start_date": date_range[0], "end_date": date_range[1], "sites": sites if sites else None}
-    df_daily = db.run_sql_file("get_tracked_individuals.sql", parameters=params)
+    df_daily = db.run_sql_file("home/get_tracked_individuals.sql", parameters=params)
     df_filtered = (
         df_daily.set_index("created_at")
         .reindex(pd.date_range(start=date_range[0], end=date_range[1], freq="D"))
@@ -502,12 +438,12 @@ def update_daily_sightings(date_range: list[str | None], sites: list[str]):
         ]
     )
     fig.update_traces(
-        hovertemplate="<b>Datetime</b>: %{x}, %{x|%a}<br>" "<b>N° of tracked individuals</b>: %{y}" "<extra></extra>",
+        hovertemplate="<b>Datetime</b>: %{x}, %{x|%a}<br>" "<b>N° of tracks</b>: %{y}" "<extra></extra>",
     )
     fig.update_layout(
         showlegend=False,
         xaxis=dict(title="Datetime"),
-        yaxis=dict(title="Number of tracked individuals"),
+        yaxis=dict(title="Number of tracks"),
         margin=dict(l=20, r=20, t=20, b=20),
         autosize=True,
     )
@@ -528,7 +464,7 @@ def update_hourly_flow(date_range: list[str | None], sites: list[str]):
 
     # Retrieve data.
     params = {"start_date": date_range[0], "end_date": date_range[1], "sites": sites if sites else None}
-    df_hourly = db.run_sql_file("get_tracked_individuals_hourly.sql", parameters=params)
+    df_hourly = db.run_sql_file("home/get_tracked_individuals_hourly.sql", parameters=params)
     df_filtered = (
         df_hourly.set_index("created_at")
         .reindex(pd.date_range(start=f"{date_range[0]} 00:00:00", end=f"{date_range[1]} 23:00:00", freq="h"))
@@ -545,13 +481,13 @@ def update_hourly_flow(date_range: list[str | None], sites: list[str]):
     # Create figure.
     fig = px.imshow(df_pivot, aspect="auto", color_continuous_scale=CONTINUOUS_SCALE)
     fig.update_traces(
-        hovertemplate="<b>N° of trackers</b>: %{z}<br><br>"
+        hovertemplate="<b>N° of tracks</b>: %{z}<br><br>"
         "<b>Date</b>: %{x}<br>"
         "<b>Hour</b>: %{y}<br>"
         "<extra></extra>"
     )
     fig.update_layout(
-        xaxis=dict(title="Date", showgrid=False, zeroline=False),
+        xaxis=dict(title="Datetime", showgrid=False, zeroline=False),
         yaxis=dict(title="Hour", showgrid=False, zeroline=False),
         margin=dict(l=20, r=20, t=20, b=20),
         autosize=True,

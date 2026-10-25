@@ -36,22 +36,22 @@ layout = dmc.Container(
                                 },
                                 {
                                     "field": "trackers",
-                                    "headerName": "Trackers",
+                                    "headerName": "N° Tracks",
                                     "headerTooltip": "Number of distinct tracked individuals in the video",
                                 },
                                 {
                                     "field": "species",
-                                    "headerName": "Species",
+                                    "headerName": "N° Species",
                                     "headerTooltip": "Number of distinct species detected in the video",
                                 },
                                 {
                                     "field": "labels",
-                                    "headerName": "Labels",
+                                    "headerName": "Species",
                                     "headerTooltip": "List of species identified by the model",
                                 },
                                 {
                                     "field": "date",
-                                    "headerName": "Date",
+                                    "headerName": "Datetime",
                                     "headerTooltip": "Video creation date and time",
                                 },
                             ],
@@ -102,14 +102,14 @@ layout = dmc.Container(
                                                 },
                                                 {
                                                     "field": "tracker_id",
-                                                    "headerName": "Tracker ID",
+                                                    "headerName": "Track ID",
                                                     "headerTooltip": "Tracker ID referring to the individual in the video. It cannot be edited. If not true, set Label to None_of_the_above.",
                                                     "editable": False,
                                                     "width": 110,
                                                 },
                                                 {
                                                     "field": "label",
-                                                    "headerName": "Label",
+                                                    "headerName": "Species",
                                                     "headerTooltip": "Label associated to the individual in the video. It can be edited.",
                                                     "editable": True,
                                                     "width": 180,
@@ -181,7 +181,7 @@ def update_table(date_range: list[str | None]):
         raise PreventUpdate
 
     params = {"start_date": date_range[0], "end_date": date_range[1]}
-    df = db.run_sql_file("get_archive_eligible.sql", parameters=params)
+    df = db.run_sql_file("archive/get_archive_eligible.sql", parameters=params)
 
     return df.to_dict("records")
 
@@ -223,7 +223,7 @@ def display_predictions(selected_rows: list[dict]):
         return [], True, True
 
     params = {"video_id": selected_rows[0]["id"]}
-    df = db.run_sql_file("get_trackers.sql", parameters=params)
+    df = db.run_sql_file("archive/get_trackers.sql", parameters=params)
     records = df.to_dict("records")
 
     return records, False, len(records) == 0
@@ -310,6 +310,6 @@ def save_validation(
         for row in validation_rows
     ]
 
-    db.execute_sql_file("insert_video_validations.sql", parameters=params)
+    db.execute_sql_file("archive/insert_video_validations.sql", parameters=params)
 
     return update_table(date_range), []
