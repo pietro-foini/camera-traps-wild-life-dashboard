@@ -1,0 +1,13 @@
+SELECT
+    vi.site,
+    vo.label AS species,
+    COUNT(DISTINCT (vo.video_input_id, vo.tracker_id)) AS total
+FROM video_inputs vi
+JOIN video_outputs vo ON vi.id = vo.video_input_id
+WHERE TRUE
+    AND CAST(vi.created_at AS DATE) BETWEEN :start_date AND :end_date
+    AND (:sites IS NULL OR vi.site = ANY(:sites))
+GROUP BY
+    vi.site,
+    vo.label
+ORDER BY total ASC

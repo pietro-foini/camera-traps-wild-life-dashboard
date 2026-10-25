@@ -10,7 +10,7 @@ from camera_traps.data import Classes
 from camera_traps.db.config import db
 from camera_traps.settings import S
 
-dash.register_page(__name__, path="/archive", title="Monitoring", order=2)
+dash.register_page(__name__, path="/archive", title="Archive", order=2)
 
 
 layout = dmc.Container(
@@ -66,20 +66,24 @@ layout = dmc.Container(
                     children=[
                         dmc.Stack(
                             children=[
-                                html.Div(
-                                    id="video-container",
-                                    style={
-                                        "height": "40vh",
-                                        "backgroundColor": "#f1f3f5",
-                                        "borderRadius": "8px",
-                                    },
+                                dmc.Paper(
+                                    withBorder=True,
+                                    radius="md",
+                                    p="md",
+                                    style={"height": "40vh"},
+                                    children=html.Div(
+                                        id="video-container",
+                                        style={
+                                            "height": "36vh",
+                                            "borderRadius": "8px",
+                                        },
+                                    ),
                                 ),
                                 dmc.Stack(
                                     h="38vh",
                                     gap="xs",
                                     p="xs",
                                     style={
-                                        "backgroundColor": "#f1f3f5",
                                         "borderRadius": "8px",
                                     },
                                     children=[
