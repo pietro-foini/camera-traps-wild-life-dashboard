@@ -7,7 +7,7 @@ import plotly.io as pio
 from dash import Input, Output, callback, dcc, html
 from dash.exceptions import PreventUpdate
 
-from camera_traps.api.components import create_card
+from camera_traps.api.components import create_card, create_title
 from camera_traps.api.config import CONTINUOUS_SCALE, GRAPH_CONFIG
 from camera_traps.db.config import db
 from camera_traps.settings import SITES
@@ -34,9 +34,21 @@ layout = dmc.Container(
                                         cols=3,
                                         spacing="md",
                                         children=[
-                                            create_card(id="kpi-total-videos", title="Total videos"),
-                                            create_card(id="kpi-total-tracks", title="Total tracks"),
-                                            create_card(id="kpi-total-species", title="Total species"),
+                                            create_card(
+                                                id="kpi-total-videos",
+                                                title="Total videos",
+                                                info="Number of total videos registered.",
+                                            ),
+                                            create_card(
+                                                id="kpi-total-tracks",
+                                                title="Total tracks",
+                                                info="Number of total distinct individual tracks detected.",
+                                            ),
+                                            create_card(
+                                                id="kpi-total-species",
+                                                title="Total species",
+                                                info="Number of total distinct species detected.",
+                                            ),
                                         ],
                                     ),
                                     dmc.Paper(
@@ -86,7 +98,10 @@ layout = dmc.Container(
                                     justify="space-between",
                                     style={"height": "100%"},
                                     children=[
-                                        dmc.Text(children="Processing status", size="lg", fw=400, ta="center"),
+                                        create_title(
+                                            "Processing status",
+                                            info="Proportion of videos categorized by their current processing state.",
+                                        ),
                                         dcc.Loading(
                                             color="var(--primary)",
                                             type="circle",
@@ -97,7 +112,10 @@ layout = dmc.Container(
                                             ),
                                         ),
                                         dmc.Divider(variant="solid"),
-                                        dmc.Text(children="Computational timing", size="lg", fw=400, ta="center"),
+                                        create_title(
+                                            "Computational timing",
+                                            info="Time required to queue and process the analyzed videos.",
+                                        ),
                                         dcc.Loading(
                                             color="var(--primary)",
                                             type="circle",
@@ -121,8 +139,9 @@ layout = dmc.Container(
                                 children=dmc.Stack(
                                     gap="xs",
                                     children=[
-                                        dmc.Text(
-                                            children="Predicted species distribution", size="lg", fw=400, ta="center"
+                                        create_title(
+                                            "Predicted species distribution",
+                                            info="Total number of individual tracks detected for each identified species.",
                                         ),
                                         dcc.Loading(
                                             color="var(--primary)",
@@ -152,7 +171,10 @@ layout = dmc.Container(
                                 children=dmc.Stack(
                                     gap="xs",
                                     children=[
-                                        dmc.Text(children="Daily tracks flow", size="lg", fw=400, ta="center"),
+                                        create_title(
+                                            "Daily tracks flow",
+                                            info="Daily trend of total animal tracks detected over the selected period.",
+                                        ),
                                         dcc.Loading(
                                             color="var(--primary)",
                                             type="circle",
@@ -176,7 +198,10 @@ layout = dmc.Container(
                                 children=dmc.Stack(
                                     gap="xs",
                                     children=[
-                                        dmc.Text(children="Hourly tracks distribution", size="lg", fw=400, ta="center"),
+                                        create_title(
+                                            "Hourly tracks distribution",
+                                            info="Concentration of detected animal tracks across different hours of the day.",
+                                        ),
                                         dcc.Loading(
                                             color="var(--primary)",
                                             type="circle",

@@ -5,7 +5,7 @@ import plotly.io as pio
 from dash import Input, Output, callback, dcc
 from dash.exceptions import PreventUpdate
 
-from camera_traps.api.components import create_card
+from camera_traps.api.components import create_card, create_title
 from camera_traps.api.config import CONTINUOUS_SCALE, GRAPH_CONFIG
 from camera_traps.db.config import db
 
@@ -30,10 +30,26 @@ layout = dmc.Container(
                                         cols=4,
                                         spacing="md",
                                         children=[
-                                            create_card(id="kpi-validated-videos", title="Validated videos"),
-                                            create_card(id="kpi-validated-tracks", title="Validated tracks"),
-                                            create_card(id="kpi-model-accuracy", title="Model accuracy"),
-                                            create_card(id="kpi-human-corrections", title="Human corrections"),
+                                            create_card(
+                                                id="kpi-validated-videos",
+                                                title="Validated videos",
+                                                info="Number of total validated videos by users.",
+                                            ),
+                                            create_card(
+                                                id="kpi-validated-tracks",
+                                                title="Validated tracks",
+                                                info="Number of total validated tracks contained into the validated videos.",
+                                            ),
+                                            create_card(
+                                                id="kpi-model-accuracy",
+                                                title="Model accuracy",
+                                                info="Accuracy of the recognition model keeping detected tracks as base.",
+                                            ),
+                                            create_card(
+                                                id="kpi-human-corrections",
+                                                title="Human edits",
+                                                info="Number of total human corrections on recognized specie into detected tracks.",
+                                            ),
                                         ],
                                     ),
                                     dmc.Paper(
@@ -44,7 +60,10 @@ layout = dmc.Container(
                                         children=dmc.Stack(
                                             gap="xs",
                                             children=[
-                                                dmc.Text(children="Validation outcome", size="lg", fw=400, ta="center"),
+                                                create_title(
+                                                    "Validation outcome",
+                                                    info="Proportion of tracks categorized by their human validation result.",
+                                                ),
                                                 dcc.Loading(
                                                     color="var(--primary)",
                                                     type="circle",
@@ -70,11 +89,9 @@ layout = dmc.Container(
                                 children=dmc.Stack(
                                     gap="xs",
                                     children=[
-                                        dmc.Text(
-                                            children="Confusion matrix",
-                                            size="lg",
-                                            fw=400,
-                                            ta="center",
+                                        create_title(
+                                            "Confusion matrix",
+                                            info="Comparison between model-predicted species and human-validated labels.",
                                         ),
                                         dcc.Loading(
                                             color="var(--primary)",
@@ -104,8 +121,9 @@ layout = dmc.Container(
                                 children=dmc.Stack(
                                     gap="xs",
                                     children=[
-                                        dmc.Text(
-                                            children="Validation outcome by species", size="lg", fw=400, ta="center"
+                                        create_title(
+                                            "Validation outcome by species",
+                                            info="Breakdown of confirmed and corrected tracks for each identified species.",
                                         ),
                                         dcc.Loading(
                                             color="var(--primary)",
@@ -130,8 +148,9 @@ layout = dmc.Container(
                                 children=dmc.Stack(
                                     gap="xs",
                                     children=[
-                                        dmc.Text(
-                                            children="Frames per tracker distribution", size="lg", fw=400, ta="center"
+                                        create_title(
+                                            "Frames per tracker distribution",
+                                            info="Number of frames captured per individual track across different species.",
                                         ),
                                         dcc.Loading(
                                             color="var(--primary)",
