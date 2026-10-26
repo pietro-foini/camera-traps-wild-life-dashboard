@@ -9,6 +9,7 @@ packages = [{ include = "camera_traps" }]
 [tool.poetry.dependencies]
 python = ">=3.11,<3.13"
 Flask = "3.1.3"
+Authlib = "1.9.1"
 gunicorn = "26.0.0"
 pydantic = "2.13.5"
 pydantic-settings = "2.8.1"

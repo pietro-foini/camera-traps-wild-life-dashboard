@@ -297,17 +297,23 @@ def remove_manual_row(cell, current_rows):
 @callback(
     Output("prediction-table", "rowData", allow_duplicate=True),
     Output("validation-table", "rowData", allow_duplicate=True),
+    Input("session-user-store", "data"),
     Input("save-validation-btn", "n_clicks"),
     State("validation-table", "rowData"),
     State("prediction-table", "selectedRows"),
     State("date-range-picker", "value"),
+    State("site-filter", "value"),
+    State("hour-range-slider", "value"),
     prevent_initial_call=True,
 )
 def save_validation(
+    user_data: dict[str, str],
     n_clicks: int,
     validation_rows: list[dict],
     selected_video: list[dict],
     date_range: list[str | None],
+    sites: list[str],
+    hour_range: list[int],
 ):
     """Save updated labels to the database"""
 
@@ -321,11 +327,11 @@ def save_validation(
             "label": row["label"],
             "comments": row.get("comments"),
             "is_modified": (row.get("tracker_id") is None) or (row["label"] != row.get("original_label")),
-            "validated_by": "admin",
+            "validated_by": user_data.get("nickname", "Guest"),
         }
         for row in validation_rows
     ]
 
     db.execute_sql_file("archive/insert_video_validations.sql", parameters=params)
 
-    return update_table(date_range), []
+    return update_table(date_range, sites, hour_range), []

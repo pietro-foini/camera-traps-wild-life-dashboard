@@ -9,6 +9,14 @@ SITES = {
 class Settings(BaseSettings):
     """Global Settings"""
 
+    # Authentication.
+    AUTH_DOMAIN: str
+    """auth0 domain"""
+    AUTH_CLIENT_ID: str
+    """auth0 client id"""
+    AUTH_CLIENT_SECRET: str
+    """auth0 client secret"""
+
     # Postgres.
     DB_USER: str
     """user"""

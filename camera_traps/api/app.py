@@ -1,13 +1,16 @@
 from datetime import datetime, timedelta
 
 import dash_mantine_components as dmc
-from dash import Dash, Input, Output, State, callback, page_container, page_registry
+from dash import Dash, Input, Output, State, callback, dcc, page_container, page_registry
 from dash_iconify import DashIconify
+from flask import session
 
+from camera_traps.api.server import server
 from camera_traps.settings import SITES
 
 app = Dash(
     __name__,
+    server=server,
     use_pages=True,
     pages_folder="pages",
     assets_folder="assets",
@@ -42,215 +45,240 @@ app.layout = dmc.MantineProvider(
             "fontWeight": "600",
         },
     },
-    children=dmc.AppShell(
-        header={"height": 60},
-        padding=0,
-        children=[
-            dmc.AppShellHeader(
-                bg="palette.6",
-                px="md",
-                style={"borderBottom": "none"},
-                children=[
-                    dmc.Group(
-                        justify="space-between",
-                        align="center",
-                        h="100%",
-                        children=[
-                            dmc.Group(
-                                gap="xs",
-                                children=[
-                                    DashIconify(icon="tabler:paw", width=24, color="white"),
-                                    dmc.Text(children="Dashboard", fw=700, size="lg", mr="md", c="white"),
-                                    *[
-                                        dmc.NavLink(
-                                            label=page["name"],
-                                            href=page["relative_path"],
-                                            active="exact",
-                                            className="nav-header-link",
-                                            w="auto",
-                                            px="sm",
-                                            py="xs",
-                                            c="white",
-                                            style={"borderRadius": "6px"},
-                                        )
-                                        for page in page_registry.values()
+    children=[
+        dcc.Store(id="session-user-store", storage_type="session"),
+        dmc.AppShell(
+            header={"height": 60},
+            padding=0,
+            children=[
+                dmc.AppShellHeader(
+                    bg="palette.6",
+                    px="md",
+                    style={"borderBottom": "none"},
+                    children=[
+                        dmc.Group(
+                            justify="space-between",
+                            align="center",
+                            h="100%",
+                            children=[
+                                dmc.Group(
+                                    gap="xs",
+                                    children=[
+                                        DashIconify(icon="tabler:paw", width=24, color="white"),
+                                        dmc.Text(children="Dashboard", fw=700, size="lg", mr="md", c="white"),
+                                        *[
+                                            dmc.NavLink(
+                                                label=page["name"],
+                                                href=page["relative_path"],
+                                                active="exact",
+                                                className="nav-header-link",
+                                                w="auto",
+                                                px="sm",
+                                                py="xs",
+                                                c="white",
+                                                style={"borderRadius": "6px"},
+                                            )
+                                            for page in page_registry.values()
+                                        ],
                                     ],
-                                ],
-                            ),
-                            dmc.Group(
-                                gap="lg",
-                                align="center",
-                                children=[
-                                    dmc.Group(
-                                        gap="xs",
-                                        align="center",
-                                        children=[
-                                            dmc.Text(children="Appearance", size="sm", fw=600, c="white"),
-                                            dmc.RadioGroup(
-                                                id="theme-radio",
-                                                value="light",
-                                                size="sm",
-                                                children=dmc.Group(
-                                                    gap="sm",
-                                                    children=[
-                                                        dmc.Radio(
-                                                            label="Light",
-                                                            value="light",
-                                                            color="palette.8",
-                                                            styles={"label": {"color": "white", "paddingLeft": "6px"}},
-                                                        ),
-                                                        dmc.Radio(
-                                                            label="Dark",
-                                                            value="dark",
-                                                            color="palette.8",
-                                                            styles={"label": {"color": "white", "paddingLeft": "6px"}},
-                                                        ),
-                                                    ],
-                                                ),
-                                            ),
-                                        ],
-                                    ),
-                                    dmc.Group(
-                                        gap="xs",
-                                        align="center",
-                                        children=[
-                                            dmc.Text(children="Language", size="sm", fw=600, c="white"),
-                                            dmc.Select(
-                                                id="language-select",
-                                                data=[
-                                                    {"value": "en", "label": "English"},
-                                                ],
-                                                value="en",
-                                                w=120,
-                                                size="xs",
-                                                allowDeselect=False,
-                                            ),
-                                        ],
-                                    ),
-                                    dmc.Tooltip(
-                                        dmc.Avatar(radius="xl", color="white"),
-                                        label="Admin",
-                                        position="bottom",
-                                    ),
-                                ],
-                            ),
-                        ],
-                    )
-                ],
-            ),
-            dmc.AppShellMain(
-                children=[
-                    dmc.Paper(
-                        px="md",
-                        py="sm",
-                        radius=0,
-                        style={"borderBottom": "1px solid var(--mantine-color-default-border)"},
-                        children=[
-                            dmc.Group(
-                                gap="sm",
-                                align="center",
-                                children=[
-                                    dmc.ActionIcon(
-                                        id="toggle-filters-btn",
-                                        variant="outline",
-                                        color="palette",
-                                        size="lg",
-                                        radius="sm",
-                                        children=DashIconify(icon="lucide:sliders-horizontal", width=20),
-                                    ),
-                                    dmc.Text(children="Filters", fw=500, size="sm"),
-                                ],
-                            ),
-                            dmc.Collapse(
-                                id="filters-collapse",
-                                opened=True,
-                                children=[
-                                    dmc.SimpleGrid(
-                                        cols={"base": 1, "sm": 2, "md": 4},
-                                        spacing="lg",
-                                        pt="md",
-                                        pb="xs",
-                                        px="xl",
-                                        children=[
-                                            dmc.DatePickerInput(
-                                                id="date-range-picker",
-                                                label="Date Range",
-                                                type="range",
-                                                value=[
-                                                    datetime.now().date() - timedelta(days=7),
-                                                    datetime.now().date(),
-                                                ],
-                                            ),
-                                            dmc.MultiSelect(
-                                                id="site-filter",
-                                                value=[],
-                                                label="Site",
-                                                placeholder="All",
-                                                data=[{"value": k, "label": v.get("name")} for k, v in SITES.items()],
-                                                searchable=True,
-                                            ),
-                                            dmc.Stack(
-                                                gap=6,
-                                                children=[
-                                                    dmc.Group(
-                                                        justify="space-between",
+                                ),
+                                dmc.Group(
+                                    gap="lg",
+                                    align="center",
+                                    children=[
+                                        dmc.Group(
+                                            gap="xs",
+                                            align="center",
+                                            children=[
+                                                dmc.Text(children="Appearance", size="sm", fw=600, c="white"),
+                                                dmc.RadioGroup(
+                                                    id="theme-radio",
+                                                    value="light",
+                                                    size="sm",
+                                                    children=dmc.Group(
+                                                        gap="sm",
                                                         children=[
-                                                            dmc.Text("Time Range", size="sm", fw=500),
-                                                            dmc.Badge(
-                                                                id="hour-range-label",
-                                                                children="00:00 - 24:00",
-                                                                variant="light",
-                                                                color="palette",
-                                                                size="sm",
+                                                            dmc.Radio(
+                                                                label="Light",
+                                                                value="light",
+                                                                color="palette.8",
+                                                                styles={
+                                                                    "label": {"color": "white", "paddingLeft": "6px"}
+                                                                },
+                                                            ),
+                                                            dmc.Radio(
+                                                                label="Dark",
+                                                                value="dark",
+                                                                color="palette.8",
+                                                                styles={
+                                                                    "label": {"color": "white", "paddingLeft": "6px"}
+                                                                },
                                                             ),
                                                         ],
                                                     ),
-                                                    dmc.RangeSlider(
-                                                        id="hour-range-slider",
-                                                        min=0,
-                                                        max=24,
-                                                        step=1,
-                                                        value=[0, 24],
-                                                        minRange=1,
-                                                        color="palette",
-                                                        marks=[
-                                                            {"value": 0, "label": "00"},
-                                                            {"value": 6, "label": "06"},
-                                                            {"value": 12, "label": "12"},
-                                                            {"value": 18, "label": "18"},
-                                                            {"value": 24, "label": "24"},
-                                                        ],
-                                                        mb="sm",
-                                                    ),
-                                                ],
-                                            ),
-                                            dmc.Group(
-                                                justify="flex-end",
-                                                align="flex-end",
-                                                children=[
-                                                    dmc.Button(
-                                                        children="Reset",
-                                                        id="reset-filters-btn",
-                                                        variant="outline",
-                                                    )
-                                                ],
-                                            ),
-                                        ],
-                                    )
-                                ],
-                            ),
-                        ],
-                    ),
-                    dmc.Box(
-                        page_container,
-                        p="md",
-                        style={"position": "relative", "zIndex": 1},
-                    ),
-                ]
-            ),
-        ],
-    ),
+                                                ),
+                                            ],
+                                        ),
+                                        dmc.Group(
+                                            gap="xs",
+                                            align="center",
+                                            children=[
+                                                dmc.Text(children="Language", size="sm", fw=600, c="white"),
+                                                dmc.Select(
+                                                    id="language-select",
+                                                    data=[
+                                                        {"value": "en", "label": "English"},
+                                                    ],
+                                                    value="en",
+                                                    w=120,
+                                                    size="xs",
+                                                    allowDeselect=False,
+                                                ),
+                                            ],
+                                        ),
+                                        dmc.Tooltip(
+                                            dmc.Avatar(radius="xl", color="white"),
+                                            id="user-tooltip",
+                                            position="bottom",
+                                            label="Guest",
+                                        ),
+                                    ],
+                                ),
+                            ],
+                        )
+                    ],
+                ),
+                dmc.AppShellMain(
+                    children=[
+                        dmc.Paper(
+                            px="md",
+                            py="sm",
+                            radius=0,
+                            style={"borderBottom": "1px solid var(--mantine-color-default-border)"},
+                            children=[
+                                dmc.Group(
+                                    gap="sm",
+                                    align="center",
+                                    children=[
+                                        dmc.ActionIcon(
+                                            id="toggle-filters-btn",
+                                            variant="outline",
+                                            color="palette",
+                                            size="lg",
+                                            radius="sm",
+                                            children=DashIconify(icon="lucide:sliders-horizontal", width=20),
+                                        ),
+                                        dmc.Text(children="Filters", fw=500, size="sm"),
+                                    ],
+                                ),
+                                dmc.Collapse(
+                                    id="filters-collapse",
+                                    opened=True,
+                                    children=[
+                                        dmc.SimpleGrid(
+                                            cols={"base": 1, "sm": 2, "md": 4},
+                                            spacing="lg",
+                                            pt="md",
+                                            pb="xs",
+                                            px="xl",
+                                            children=[
+                                                dmc.DatePickerInput(
+                                                    id="date-range-picker",
+                                                    label="Date Range",
+                                                    type="range",
+                                                    value=[
+                                                        datetime.now().date() - timedelta(days=7),
+                                                        datetime.now().date(),
+                                                    ],
+                                                ),
+                                                dmc.MultiSelect(
+                                                    id="site-filter",
+                                                    value=[],
+                                                    label="Site",
+                                                    placeholder="All",
+                                                    data=[
+                                                        {"value": k, "label": v.get("name")} for k, v in SITES.items()
+                                                    ],
+                                                    searchable=True,
+                                                ),
+                                                dmc.Stack(
+                                                    gap=6,
+                                                    children=[
+                                                        dmc.Group(
+                                                            justify="space-between",
+                                                            children=[
+                                                                dmc.Text("Time Range", size="sm", fw=500),
+                                                                dmc.Badge(
+                                                                    id="hour-range-label",
+                                                                    children="00:00 - 24:00",
+                                                                    variant="light",
+                                                                    color="palette",
+                                                                    size="sm",
+                                                                ),
+                                                            ],
+                                                        ),
+                                                        dmc.RangeSlider(
+                                                            id="hour-range-slider",
+                                                            min=0,
+                                                            max=24,
+                                                            step=1,
+                                                            value=[0, 24],
+                                                            minRange=1,
+                                                            color="palette",
+                                                            marks=[
+                                                                {"value": 0, "label": "00"},
+                                                                {"value": 6, "label": "06"},
+                                                                {"value": 12, "label": "12"},
+                                                                {"value": 18, "label": "18"},
+                                                                {"value": 24, "label": "24"},
+                                                            ],
+                                                            mb="sm",
+                                                        ),
+                                                    ],
+                                                ),
+                                                dmc.Group(
+                                                    justify="flex-end",
+                                                    align="flex-end",
+                                                    children=[
+                                                        dmc.Button(
+                                                            children="Reset",
+                                                            id="reset-filters-btn",
+                                                            variant="outline",
+                                                        )
+                                                    ],
+                                                ),
+                                            ],
+                                        )
+                                    ],
+                                ),
+                            ],
+                        ),
+                        dmc.Box(
+                            page_container,
+                            p="md",
+                            style={"position": "relative", "zIndex": 1},
+                        ),
+                    ]
+                ),
+            ],
+        ),
+    ],
 )
+
+
+@callback(
+    Output("session-user-store", "data"),
+    Input("_pages_location", "pathname"),
+)
+def store_user_session(_):
+    """Read session user data"""
+
+    user = session.get("user", {})
+
+    return {
+        "email": user.get("email", ""),
+        "nickname": user.get("nickname", "User"),
+    }
 
 
 @callback(
@@ -274,6 +302,16 @@ def switch_theme(theme_value: str):
     """Change the theme colorscheme"""
 
     return theme_value
+
+
+@callback(
+    Output("user-tooltip", "label"),
+    Input("session-user-store", "data"),
+)
+def update_header_user(user_data: dict[str, str]):
+    """Update the user tooltip"""
+
+    return user_data.get("nickname", "Guest")
 
 
 @callback(
