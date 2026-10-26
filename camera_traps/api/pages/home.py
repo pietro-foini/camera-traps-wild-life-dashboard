@@ -121,7 +121,9 @@ layout = dmc.Container(
                                 children=dmc.Stack(
                                     gap="xs",
                                     children=[
-                                        dmc.Text(children="Species distribution", size="lg", fw=400, ta="center"),
+                                        dmc.Text(
+                                            children="Predicted species distribution", size="lg", fw=400, ta="center"
+                                        ),
                                         dcc.Loading(
                                             color="var(--primary)",
                                             type="circle",
