@@ -6,8 +6,6 @@ from dash_iconify import DashIconify
 
 from camera_traps.settings import SITES
 
-dmc.add_figure_templates()
-
 app = Dash(
     __name__,
     use_pages=True,
@@ -256,7 +254,7 @@ app.layout = dmc.MantineProvider(
     State("filters-collapse", "opened"),
     prevent_initial_call=True,
 )
-def toggle_filters(n_clicks, is_open):
+def toggle_filters(n_clicks: int, is_open: bool):
     """Open or close filters header"""
 
     return not is_open
@@ -267,7 +265,7 @@ def toggle_filters(n_clicks, is_open):
     Input("theme-radio", "value"),
     prevent_initial_call=True,
 )
-def switch_theme(theme_value):
+def switch_theme(theme_value: str):
     """Change the theme colorscheme"""
 
     return theme_value
@@ -277,7 +275,7 @@ def switch_theme(theme_value):
     Output("hour-range-label", "children"),
     Input("hour-range-slider", "value"),
 )
-def update_hour_badge(hours):
+def update_hour_badge(hours: list[int]):
     """Update the hour range label"""
 
     return f"{hours[0]:02d}:00 – {hours[1]:02d}:00"
@@ -290,11 +288,7 @@ def update_hour_badge(hours):
     Input("reset-filters-btn", "n_clicks"),
     prevent_initial_call=True,
 )
-def reset_filters(n_clicks):
+def reset_filters(n_clicks: int):
     """Reset filters to default values"""
 
-    return (
-        [datetime.now().date() - timedelta(days=30), datetime.now().date()],
-        [],
-        [0, 24],
-    )
+    return [datetime.now().date() - timedelta(days=30), datetime.now().date()], [], [0, 24]
