@@ -262,6 +262,10 @@ def update_confusion_matrix(date_range: list[str | None], sites: list[str]):
         autosize=True,
         coloraxis_colorbar=dict(title="Tracks"),
         coloraxis_colorbar_title_side="right",
+        hoverlabel=dict(
+            bgcolor="#2E6F40",
+            bordercolor="#2E6F40",
+        ),
     )
 
     return fig

@@ -10,7 +10,7 @@ from dash.exceptions import PreventUpdate
 from camera_traps.api.components import create_card
 from camera_traps.api.config import CONTINUOUS_SCALE, GRAPH_CONFIG
 from camera_traps.db.config import db
-from camera_traps.settings import SITES, S
+from camera_traps.settings import SITES
 
 dash.register_page(__name__, path="/", title="Home", order=0)
 
@@ -212,11 +212,12 @@ def update_kpi(date_range: list[str | None], sites: list[str]):
     # Retrieve data.
     params = {"start_date": date_range[0], "end_date": date_range[1], "sites": sites if sites else None}
     df_kpi = db.run_sql_file("home/get_kpi.sql", parameters=params)
+    df_species = db.run_sql_file("home/get_species.sql", parameters=params)
 
     return (
         f"{df_kpi['total_videos'].sum():,.0f}",
         f"{df_kpi['total_tracks'].sum():,.0f}",
-        f"{df_kpi['total_species'].sum():,.0f}",
+        f"{df_species['species'].nunique():,.0f}",
     )
 
 
@@ -247,22 +248,31 @@ def update_map(date_range: list[str | None], theme: str, sites: list[str]):
         custom_data=["name", "total_videos", "total_tracks", "total_species"],
     )
     fig.update_traces(
-        marker=dict(size=14, color="#2E6F40", opacity=0.9),
+        marker=dict(size=13, color="#E07A5F", opacity=1.0),
         hovertemplate=(
-            "<b>%{customdata[0]}</b><br><br>"
+            "<b>Site</b>: %{customdata[0]}<br><br>"
             "<b>Total videos</b>: %{customdata[1]}<br>"
-            "<b>Tracked individuals</b>: %{customdata[2]}<<br>"
+            "<b>Tracked individuals</b>: %{customdata[2]}<br>"
             "<b>Detected species</b>: %{customdata[3]}"
             "<extra></extra>"
         ),
+    )
+    fig.add_trace(
+        go.Scattermapbox(
+            lat=df_trap["lat"],
+            lon=df_trap["lon"],
+            mode="markers",
+            marker=dict(size=26, color="#E07A5F", opacity=0.35),
+            hoverinfo="skip",
+            showlegend=False,
+        )
     )
     fig.update_layout(
         margin=dict(l=0, r=0, t=0, b=0),
         hovermode="closest",
         mapbox=dict(
-            accesstoken=S.MAPBOX_TOKEN,
             center=go.layout.mapbox.Center(lat=44.6337, lon=9.7314),
-            style=theme,
+            style="open-street-map",
             zoom=12,
         ),
         paper_bgcolor="rgba(0,0,0,0)",
@@ -379,16 +389,16 @@ def update_species_histogram(date_range: list[str | None], sites: list[str]):
     # Retrieve data.
     params = {"start_date": date_range[0], "end_date": date_range[1], "sites": sites if sites else None}
     df_species = db.run_sql_file("home/get_species.sql", parameters=params)
+    df_species = df_species.groupby("species", as_index=False).agg(total=("total", "sum"))
 
     # Create figure.
     fig = px.bar(
         df_species,
         x="total",
         y="species",
-        color="site",
         orientation="h",
     )
-    fig.update_traces(hovertemplate="<b>Species</b>: %{y}<br>" "<b>N° of tracks</b>: %{x}<br>" "<extra></extra>")
+    fig.update_traces(hovertemplate="<b>N° of tracks</b>: %{x}<br>" "<b>Species</b>: %{y}<br>" "<extra></extra>")
     fig.update_layout(
         legend=dict(title_text=""),
         xaxis=dict(title="Number of tracks"),
@@ -438,7 +448,7 @@ def update_daily_sightings(date_range: list[str | None], sites: list[str]):
         ]
     )
     fig.update_traces(
-        hovertemplate="<b>Datetime</b>: %{x}, %{x|%a}<br>" "<b>N° of tracks</b>: %{y}" "<extra></extra>",
+        hovertemplate="<b>N° of tracks</b>: %{y}<br>" "<b>Datetime</b>: %{x}, %{x|%a}" "<extra></extra>",
     )
     fig.update_layout(
         showlegend=False,
@@ -482,7 +492,7 @@ def update_hourly_flow(date_range: list[str | None], sites: list[str]):
     fig = px.imshow(df_pivot, aspect="auto", color_continuous_scale=CONTINUOUS_SCALE)
     fig.update_traces(
         hovertemplate="<b>N° of tracks</b>: %{z}<br><br>"
-        "<b>Date</b>: %{x}<br>"
+        "<b>Datetime</b>: %{x}<br>"
         "<b>Hour</b>: %{y}<br>"
         "<extra></extra>"
     )
@@ -493,6 +503,10 @@ def update_hourly_flow(date_range: list[str | None], sites: list[str]):
         autosize=True,
         coloraxis_colorbar=dict(title="Trackers"),
         coloraxis_colorbar_title_side="right",
+        hoverlabel=dict(
+            bgcolor="#2E6F40",
+            bordercolor="#2E6F40",
+        ),
     )
 
     return fig
