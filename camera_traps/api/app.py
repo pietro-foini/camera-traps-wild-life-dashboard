@@ -127,6 +127,11 @@ app.layout = dmc.MantineProvider(
                                             ),
                                         ],
                                     ),
+                                    dmc.Tooltip(
+                                        dmc.Avatar(radius="xl", color="white"),
+                                        label="Admin",
+                                        position="bottom",
+                                    ),
                                 ],
                             ),
                         ],
