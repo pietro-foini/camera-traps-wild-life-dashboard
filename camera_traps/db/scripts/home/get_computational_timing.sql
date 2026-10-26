@@ -7,4 +7,6 @@ WHERE TRUE
     AND processing_started_at IS NOT NULL
     AND processing_ended_at IS NOT NULL
     AND CAST(created_at AS DATE) BETWEEN :start_date AND :end_date
+    AND EXTRACT(HOUR FROM created_at) >= :start_hour
+    AND EXTRACT(HOUR FROM created_at) < :end_hour
     AND (:sites IS NULL OR site = ANY(:sites));

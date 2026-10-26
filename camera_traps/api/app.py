@@ -186,7 +186,41 @@ app.layout = dmc.MantineProvider(
                                                 data=[{"value": k, "label": v.get("name")} for k, v in SITES.items()],
                                                 searchable=True,
                                             ),
-                                            dmc.Box(visibleFrom="md"),
+                                            dmc.Stack(
+                                                gap=6,
+                                                children=[
+                                                    dmc.Group(
+                                                        justify="space-between",
+                                                        children=[
+                                                            dmc.Text("Time Range", size="sm", fw=500),
+                                                            dmc.Badge(
+                                                                id="hour-range-label",
+                                                                children="00:00 - 24:00",
+                                                                variant="light",
+                                                                color="palette",
+                                                                size="sm",
+                                                            ),
+                                                        ],
+                                                    ),
+                                                    dmc.RangeSlider(
+                                                        id="hour-range-slider",
+                                                        min=0,
+                                                        max=24,
+                                                        step=1,
+                                                        value=[0, 24],
+                                                        minRange=1,
+                                                        color="palette",
+                                                        marks=[
+                                                            {"value": 0, "label": "00"},
+                                                            {"value": 6, "label": "06"},
+                                                            {"value": 12, "label": "12"},
+                                                            {"value": 18, "label": "18"},
+                                                            {"value": 24, "label": "24"},
+                                                        ],
+                                                        mb="sm",
+                                                    ),
+                                                ],
+                                            ),
                                             dmc.Group(
                                                 justify="flex-end",
                                                 align="flex-end",
@@ -240,12 +274,27 @@ def switch_theme(theme_value):
 
 
 @callback(
+    Output("hour-range-label", "children"),
+    Input("hour-range-slider", "value"),
+)
+def update_hour_badge(hours):
+    """Update the hour range label"""
+
+    return f"{hours[0]:02d}:00 – {hours[1]:02d}:00"
+
+
+@callback(
     Output("date-range-picker", "value"),
     Output("site-filter", "value"),
+    Output("hour-range-slider", "value"),
     Input("reset-filters-btn", "n_clicks"),
     prevent_initial_call=True,
 )
 def reset_filters(n_clicks):
     """Reset filters to default values"""
 
-    return [datetime.now().date() - timedelta(days=30), datetime.now().date()], []
+    return (
+        [datetime.now().date() - timedelta(days=30), datetime.now().date()],
+        [],
+        [0, 24],
+    )

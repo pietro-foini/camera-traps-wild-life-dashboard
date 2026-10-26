@@ -16,5 +16,7 @@ LEFT JOIN unique_predictions up
     ON vv.video_input_id = up.video_input_id AND vv.tracker_id = up.tracker_id
 WHERE TRUE
     AND CAST(vi.created_at AS DATE) BETWEEN :start_date AND :end_date
+    AND EXTRACT(HOUR FROM vi.created_at) >= :start_hour
+    AND EXTRACT(HOUR FROM vi.created_at) < :end_hour
     AND (:sites IS NULL OR vi.site = ANY(:sites))
 GROUP BY 1, 2

@@ -161,15 +161,22 @@ layout = dmc.Container(
     Output("kpi-human-corrections", "children"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
+    Input("hour-range-slider", "value"),
 )
-def update_validation_kpi(date_range: list[str | None], sites: list[str]):
+def update_validation_kpi(date_range: list[str | None], sites: list[str], hour_range: list[int]):
     """Display the Validation KPI cards"""
 
     if not date_range[0] or not date_range[1]:
         raise PreventUpdate
 
     # Retrieve data.
-    params = {"start_date": date_range[0], "end_date": date_range[1], "sites": sites if sites else None}
+    params = {
+        "start_date": date_range[0],
+        "end_date": date_range[1],
+        "sites": sites if sites else None,
+        "start_hour": hour_range[0],
+        "end_hour": hour_range[1],
+    }
     df_kpi = db.run_sql_file("analytics/get_kpi.sql", parameters=params)
 
     total_videos = df_kpi["total_videos"].iloc[0] or 0
@@ -189,15 +196,22 @@ def update_validation_kpi(date_range: list[str | None], sites: list[str]):
     Output("validation-outcome-chart", "figure"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
+    Input("hour-range-slider", "value"),
 )
-def update_validation_outcome(date_range: list[str | None], sites: list[str]):
+def update_validation_outcome(date_range: list[str | None], sites: list[str], hour_range: list[int]):
     """Display donut chart of confirmed vs modified vs manual additions"""
 
     if not date_range[0] or not date_range[1]:
         raise PreventUpdate
 
     # Retrieve data.
-    params = {"start_date": date_range[0], "end_date": date_range[1], "sites": sites if sites else None}
+    params = {
+        "start_date": date_range[0],
+        "end_date": date_range[1],
+        "sites": sites if sites else None,
+        "start_hour": hour_range[0],
+        "end_hour": hour_range[1],
+    }
     df_outcome = db.run_sql_file("analytics/get_validation.sql", parameters=params)
 
     # Create figure.
@@ -228,15 +242,22 @@ def update_validation_outcome(date_range: list[str | None], sites: list[str]):
     Output("confusion-matrix-chart", "figure"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
+    Input("hour-range-slider", "value"),
 )
-def update_confusion_matrix(date_range: list[str | None], sites: list[str]):
+def update_confusion_matrix(date_range: list[str | None], sites: list[str], hour_range: list[int]):
     """Display confusion matrix between predicted label and validated label"""
 
     if not date_range[0] or not date_range[1]:
         raise PreventUpdate
 
     # Retrieve data.
-    params = {"start_date": date_range[0], "end_date": date_range[1], "sites": sites if sites else None}
+    params = {
+        "start_date": date_range[0],
+        "end_date": date_range[1],
+        "sites": sites if sites else None,
+        "start_hour": hour_range[0],
+        "end_hour": hour_range[1],
+    }
     df_cm = db.run_sql_file("analytics/get_confusion.sql", parameters=params)
     df_pivot = df_cm.pivot_table(
         index="validated_label", columns="predicted_label", values="total", aggfunc="sum", fill_value=0
@@ -275,15 +296,22 @@ def update_confusion_matrix(date_range: list[str | None], sites: list[str]):
     Output("species-validation-bar", "figure"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
+    Input("hour-range-slider", "value"),
 )
-def update_species_validation_bar(date_range: list[str | None], sites: list[str]):
+def update_species_validation_bar(date_range: list[str | None], sites: list[str], hour_range: list[int]):
     """Display horizontal stacked bar chart of confirmed vs modified per species"""
 
     if not date_range[0] or not date_range[1]:
         raise PreventUpdate
 
     # Retrieve data.
-    params = {"start_date": date_range[0], "end_date": date_range[1], "sites": sites if sites else None}
+    params = {
+        "start_date": date_range[0],
+        "end_date": date_range[1],
+        "sites": sites if sites else None,
+        "start_hour": hour_range[0],
+        "end_hour": hour_range[1],
+    }
     df_species_val = db.run_sql_file("analytics/get_validation_species.sql", parameters=params)
 
     # Create figure.
@@ -314,15 +342,22 @@ def update_species_validation_bar(date_range: list[str | None], sites: list[str]
     Output("tracker-frames-boxplot", "figure"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
+    Input("hour-range-slider", "value"),
 )
-def update_tracker_frames_boxplot(date_range: list[str | None], sites: list[str]):
+def update_tracker_frames_boxplot(date_range: list[str | None], sites: list[str], hour_range: list[int]):
     """Display box plot of number of frames per tracker grouped by species"""
 
     if not date_range[0] or not date_range[1]:
         raise PreventUpdate
 
     # Retrieve data.
-    params = {"start_date": date_range[0], "end_date": date_range[1], "sites": sites if sites else None}
+    params = {
+        "start_date": date_range[0],
+        "end_date": date_range[1],
+        "sites": sites if sites else None,
+        "start_hour": hour_range[0],
+        "end_hour": hour_range[1],
+    }
     df_frames = db.run_sql_file("analytics/get_frames_tracks.sql", parameters=params)
 
     # Create figure.

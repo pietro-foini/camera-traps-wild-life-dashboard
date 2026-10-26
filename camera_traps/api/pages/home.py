@@ -204,15 +204,22 @@ layout = dmc.Container(
     Output("kpi-total-species", "children"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
+    Input("hour-range-slider", "value"),
 )
-def update_kpi(date_range: list[str | None], sites: list[str]):
+def update_kpi(date_range: list[str | None], sites: list[str], hour_range: list[int]):
     """Display the KPI cards"""
 
     if not date_range[0] or not date_range[1]:
         raise PreventUpdate
 
     # Retrieve data.
-    params = {"start_date": date_range[0], "end_date": date_range[1], "sites": sites if sites else None}
+    params = {
+        "start_date": date_range[0],
+        "end_date": date_range[1],
+        "sites": sites if sites else None,
+        "start_hour": hour_range[0],
+        "end_hour": hour_range[1],
+    }
     df_kpi = db.run_sql_file("home/get_kpi.sql", parameters=params)
     df_species = db.run_sql_file("home/get_species.sql", parameters=params)
 
@@ -227,17 +234,23 @@ def update_kpi(date_range: list[str | None], sites: list[str]):
     Output("camera-map", "figure"),
     Output("camera-map-value", "children"),
     Input("date-range-picker", "value"),
-    Input("theme-radio", "value"),
     Input("site-filter", "value"),
+    Input("hour-range-slider", "value"),
 )
-def update_map(date_range: list[str | None], theme: str, sites: list[str]):
+def update_map(date_range: list[str | None], sites: list[str], hour_range: list[int]):
     """Display camera trap locations on the map"""
 
     if not date_range[0] or not date_range[1]:
         raise PreventUpdate
 
     # Retrieve data.
-    params = {"start_date": date_range[0], "end_date": date_range[1], "sites": sites if sites else None}
+    params = {
+        "start_date": date_range[0],
+        "end_date": date_range[1],
+        "sites": sites if sites else None,
+        "start_hour": hour_range[0],
+        "end_hour": hour_range[1],
+    }
     df_kpi = db.run_sql_file("home/get_kpi.sql", parameters=params)
     df_location = pd.DataFrame.from_dict(SITES, orient="index").reset_index(names="site")
     df_trap = pd.merge(df_location, df_kpi, on="site", how="right")
@@ -288,15 +301,22 @@ def update_map(date_range: list[str | None], theme: str, sites: list[str]):
     Output("status-chart", "figure"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
+    Input("hour-range-slider", "value"),
 )
-def update_status_chart(date_range: list[str | None], sites: list[str]):
+def update_status_chart(date_range: list[str | None], sites: list[str], hour_range: list[int]):
     """Display donut chart of video processing status"""
 
     if not date_range[0] or not date_range[1]:
         raise PreventUpdate
 
     # Retrieve data.
-    params = {"start_date": date_range[0], "end_date": date_range[1], "sites": sites if sites else None}
+    params = {
+        "start_date": date_range[0],
+        "end_date": date_range[1],
+        "sites": sites if sites else None,
+        "start_hour": hour_range[0],
+        "end_hour": hour_range[1],
+    }
     df_status = db.run_sql_file("home/get_status.sql", parameters=params)
 
     # Create figure.
@@ -334,15 +354,22 @@ def update_status_chart(date_range: list[str | None], sites: list[str]):
     Output("computational-timing", "figure"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
+    Input("hour-range-slider", "value"),
 )
-def update_computational_timing(date_range: list[str | None], sites: list[str]):
+def update_computational_timing(date_range: list[str | None], sites: list[str], hour_range: list[int]):
     """Display horizontal box plot of queue and processing times"""
 
     if not date_range[0] or not date_range[1]:
         raise PreventUpdate
 
     # Retrieve data.
-    params = {"start_date": date_range[0], "end_date": date_range[1], "sites": sites if sites else None}
+    params = {
+        "start_date": date_range[0],
+        "end_date": date_range[1],
+        "sites": sites if sites else None,
+        "start_hour": hour_range[0],
+        "end_hour": hour_range[1],
+    }
     df_timing = db.run_sql_file("home/get_computational_timing.sql", parameters=params)
     df_melted = df_timing.melt(
         value_vars=["queue_time", "processing_time"],
@@ -381,15 +408,22 @@ def update_computational_timing(date_range: list[str | None], sites: list[str]):
     Output("species-histogram", "figure"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
+    Input("hour-range-slider", "value"),
 )
-def update_species_histogram(date_range: list[str | None], sites: list[str]):
+def update_species_histogram(date_range: list[str | None], sites: list[str], hour_range: list[int]):
     """Display horizontal bar chart of detected species"""
 
     if not date_range[0] or not date_range[1]:
         raise PreventUpdate
 
     # Retrieve data.
-    params = {"start_date": date_range[0], "end_date": date_range[1], "sites": sites if sites else None}
+    params = {
+        "start_date": date_range[0],
+        "end_date": date_range[1],
+        "sites": sites if sites else None,
+        "start_hour": hour_range[0],
+        "end_hour": hour_range[1],
+    }
     df_species = db.run_sql_file("home/get_species.sql", parameters=params)
     df_species = df_species.groupby("species", as_index=False).agg(total=("total", "sum"))
 
@@ -416,15 +450,22 @@ def update_species_histogram(date_range: list[str | None], sites: list[str]):
     Output("daily-sightings-chart", "figure"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
+    Input("hour-range-slider", "value"),
 )
-def update_daily_sightings(date_range: list[str | None], sites: list[str]):
+def update_daily_sightings(date_range: list[str | None], sites: list[str], hour_range: list[int]):
     """Display area chart of daily detected animals"""
 
     if not date_range[0] or not date_range[1]:
         raise PreventUpdate
 
     # Retrieve data.
-    params = {"start_date": date_range[0], "end_date": date_range[1], "sites": sites if sites else None}
+    params = {
+        "start_date": date_range[0],
+        "end_date": date_range[1],
+        "sites": sites if sites else None,
+        "start_hour": hour_range[0],
+        "end_hour": hour_range[1],
+    }
     df_daily = db.run_sql_file("home/get_tracked_individuals.sql", parameters=params)
     df_filtered = (
         df_daily.set_index("created_at")
@@ -467,15 +508,22 @@ def update_daily_sightings(date_range: list[str | None], sites: list[str]):
     Output("hourly-heatmap-chart", "figure"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
+    Input("hour-range-slider", "value"),
 )
-def update_hourly_flow(date_range: list[str | None], sites: list[str]):
+def update_hourly_flow(date_range: list[str | None], sites: list[str], hour_range: list[int]):
     """Display hourly heatmap of detected animals"""
 
     if not date_range[0] or not date_range[1]:
         raise PreventUpdate
 
     # Retrieve data.
-    params = {"start_date": date_range[0], "end_date": date_range[1], "sites": sites if sites else None}
+    params = {
+        "start_date": date_range[0],
+        "end_date": date_range[1],
+        "sites": sites if sites else None,
+        "start_hour": hour_range[0],
+        "end_hour": hour_range[1],
+    }
     df_hourly = db.run_sql_file("home/get_tracked_individuals_hourly.sql", parameters=params)
     df_filtered = (
         df_hourly.set_index("created_at")
@@ -488,6 +536,7 @@ def update_hourly_flow(date_range: list[str | None], sites: list[str]):
     df_filtered["date"] = df_filtered["created_at"].dt.date
     df_filtered["hour"] = df_filtered["created_at"].dt.hour
     df_pivot = df_filtered.pivot_table(index="hour", columns="date", values="total", aggfunc="sum", fill_value=0)
+    df_pivot = df_pivot.loc[hour_range[0] : hour_range[1] - 1]
     df_pivot.index = [f"{int(h):02d}:00" for h in df_pivot.index]
 
     # Create figure.

@@ -1,6 +1,7 @@
 SELECT
     vi.id AS id,
     vi.filename,
+    vi.site AS site,
     COALESCE(vo.trackers, 0) AS trackers,
     COALESCE(vo.species, 0) AS species,
     COALESCE(vo.labels, '{}') AS labels,
@@ -17,9 +18,10 @@ LEFT JOIN (
 ) AS vo
     ON vi.id = vo.video_input_id
 WHERE TRUE
-    AND vi.processing_ended_at IS NOT NULL
-    AND vi.created_at >= CAST(:start_date AS date)
-    AND vi.created_at < (CAST(:end_date AS date) + INTERVAL '1 day')
+    AND CAST(vi.created_at AS DATE) BETWEEN :start_date AND :end_date
+    AND EXTRACT(HOUR FROM vi.created_at) >= :start_hour
+    AND EXTRACT(HOUR FROM vi.created_at) < :end_hour
+    AND (:sites IS NULL OR vi.site = ANY(:sites))
     AND NOT EXISTS (
         SELECT 1
         FROM video_validations AS val

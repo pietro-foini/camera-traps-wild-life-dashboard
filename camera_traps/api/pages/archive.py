@@ -35,6 +35,11 @@ layout = dmc.Container(
                                     "headerTooltip": "Video file name",
                                 },
                                 {
+                                    "field": "site",
+                                    "headerName": "Site",
+                                    "headerTooltip": "Site where the camera trap is located",
+                                },
+                                {
                                     "field": "trackers",
                                     "headerName": "N° Tracks",
                                     "headerTooltip": "Number of distinct tracked individuals in the video",
@@ -173,14 +178,25 @@ layout = dmc.Container(
 )
 
 
-@callback(Output("prediction-table", "rowData"), Input("date-range-picker", "value"))
-def update_table(date_range: list[str | None]):
+@callback(
+    Output("prediction-table", "rowData"),
+    Input("date-range-picker", "value"),
+    Input("site-filter", "value"),
+    Input("hour-range-slider", "value"),
+)
+def update_table(date_range: list[str | None], sites: list[str], hour_range: list[int]):
     """Update table containing the video predictions that need to be validated"""
 
     if not date_range[0] or not date_range[1]:
         raise PreventUpdate
 
-    params = {"start_date": date_range[0], "end_date": date_range[1]}
+    params = {
+        "start_date": date_range[0],
+        "end_date": date_range[1],
+        "sites": sites if sites else None,
+        "start_hour": hour_range[0],
+        "end_hour": hour_range[1],
+    }
     df = db.run_sql_file("archive/get_archive_eligible.sql", parameters=params)
 
     return df.to_dict("records")

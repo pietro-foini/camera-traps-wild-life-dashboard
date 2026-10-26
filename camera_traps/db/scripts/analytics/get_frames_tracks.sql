@@ -16,4 +16,6 @@ JOIN tracker_lengths tl
     ON vv.video_input_id = tl.video_input_id AND vv.tracker_id = tl.tracker_id
 WHERE TRUE
     AND CAST(vi.created_at AS DATE) BETWEEN :start_date AND :end_date
+    AND EXTRACT(HOUR FROM vi.created_at) >= :start_hour
+    AND EXTRACT(HOUR FROM vi.created_at) < :end_hour
     AND (:sites IS NULL OR vi.site = ANY(:sites))
