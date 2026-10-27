@@ -53,7 +53,7 @@ def create_card(id: str, title: str, info: str = ""):
                         label=info,
                         multiline=True,
                         color="#2E6F40",
-                        w=280,
+                        maw=280,
                         transitionProps={
                             "transition": "skew-up",
                             "duration": 200,

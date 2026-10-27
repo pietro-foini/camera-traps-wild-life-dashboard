@@ -255,7 +255,6 @@ app.layout = dmc.MantineProvider(
                         ),
                         dmc.Box(
                             page_container,
-                            p="md",
                             style={"position": "relative", "zIndex": 1},
                         ),
                     ]

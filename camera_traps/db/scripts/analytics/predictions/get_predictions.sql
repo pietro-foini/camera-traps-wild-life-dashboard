@@ -1,7 +1,7 @@
 SELECT
-    vi.site,
     vo.label AS species,
-    COUNT(DISTINCT (vo.video_input_id, vo.tracker_id)) AS total
+    COUNT(DISTINCT (vo.video_input_id, vo.tracker_id)) AS total,
+    AVG(vo.confidence) * 100 AS avg_confidence
 FROM video_inputs vi
 JOIN video_outputs vo ON vi.id = vo.video_input_id
 WHERE TRUE
@@ -10,6 +10,6 @@ WHERE TRUE
     AND EXTRACT(HOUR FROM vi.created_at) < :end_hour
     AND (:sites IS NULL OR vi.site = ANY(:sites))
 GROUP BY
-    vi.site,
     vo.label
-ORDER BY total ASC
+ORDER BY
+    total

@@ -36,19 +36,19 @@ layout = dmc.Container(
                                         spacing="md",
                                         children=[
                                             create_card(
+                                                id="kpi-total-sites",
+                                                title="Total sites",
+                                                info="Number of total active sites.",
+                                            ),
+                                            create_card(
                                                 id="kpi-total-videos",
                                                 title="Total videos",
                                                 info="Number of total videos registered.",
                                             ),
                                             create_card(
-                                                id="kpi-total-tracks",
-                                                title="Total tracks",
-                                                info="Number of total distinct tracks detected.",
-                                            ),
-                                            create_card(
-                                                id="kpi-total-labels",
-                                                title="Labels",
-                                                info=f"Number of distinct labels that the model could recognize: {', '.join(c.value for c in Classes)}.",
+                                                id="kpi-total-classes",
+                                                title="Total classes",
+                                                info=f"Number of distinct classes that the model could recognize: {', '.join(c.value for c in Classes)}.",
                                             ),
                                         ],
                                     ),
@@ -100,7 +100,7 @@ layout = dmc.Container(
                                     style={"height": "100%"},
                                     children=[
                                         create_title(
-                                            "Processing status",
+                                            title="Processing status",
                                             info="Proportion of videos categorized by their current processing state: PENDING, PROCESSING, COMPLETED, FAILED.",
                                         ),
                                         dcc.Loading(
@@ -114,8 +114,8 @@ layout = dmc.Container(
                                         ),
                                         dmc.Divider(variant="solid"),
                                         create_title(
-                                            "Computational timing",
-                                            info="Time required to queue and process the analyzed videos.",
+                                            title="Computational timing",
+                                            info="Time required by the algorithm to queue and process the videos.",
                                         ),
                                         dcc.Loading(
                                             color="var(--primary)",
@@ -141,8 +141,8 @@ layout = dmc.Container(
                                     gap="xs",
                                     children=[
                                         create_title(
-                                            "Tracks per video distribution",
-                                            info="Distribution of videos by the number of tracks detected in each recording.",
+                                            title="Video duration distribution",
+                                            info="Distribution of the video duration.",
                                         ),
                                         dcc.Loading(
                                             color="var(--primary)",
@@ -173,14 +173,14 @@ layout = dmc.Container(
                                     gap="xs",
                                     children=[
                                         create_title(
-                                            "Daily tracks flow",
-                                            info="Daily trend of total animal tracks detected over the selected period.",
+                                            title="Daily videos flow",
+                                            info="Daily trend of registered videos over the selected period.",
                                         ),
                                         dcc.Loading(
                                             color="var(--primary)",
                                             type="circle",
                                             children=dcc.Graph(
-                                                id="daily-sightings-chart",
+                                                id="daily-video-chart",
                                                 config=GRAPH_CONFIG,
                                                 style={"height": "30vh", "width": "100%"},
                                             ),
@@ -200,14 +200,14 @@ layout = dmc.Container(
                                     gap="xs",
                                     children=[
                                         create_title(
-                                            "Hourly tracks distribution",
-                                            info="Concentration of detected animal tracks across different hours of the day.",
+                                            title="Hourly videos distribution",
+                                            info="Concentration of registered videos across different hours of the day.",
                                         ),
                                         dcc.Loading(
                                             color="var(--primary)",
                                             type="circle",
                                             children=dcc.Graph(
-                                                id="hourly-heatmap-chart",
+                                                id="hourly-video-chart",
                                                 config=GRAPH_CONFIG,
                                                 style={"height": "30vh", "width": "100%"},
                                             ),
@@ -225,9 +225,9 @@ layout = dmc.Container(
 
 
 @callback(
+    Output("kpi-total-sites", "children"),
     Output("kpi-total-videos", "children"),
-    Output("kpi-total-tracks", "children"),
-    Output("kpi-total-labels", "children"),
+    Output("kpi-total-classes", "children"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
     Input("hour-range-slider", "value"),
@@ -249,8 +249,8 @@ def update_kpi(date_range: list[str | None], sites: list[str], hour_range: list[
     df_kpi = db.run_sql_file("home/get_kpi.sql", parameters=params)
 
     return (
+        f"{len(df_kpi):,.0f}",
         f"{df_kpi['total_videos'].sum():,.0f}",
-        f"{df_kpi['total_tracks'].sum():,.0f}",
         f"{len(Classes):,.0f}",
     )
 
@@ -285,15 +285,12 @@ def update_map(date_range: list[str | None], sites: list[str], hour_range: list[
         df_trap,
         lat="lat",
         lon="lon",
-        custom_data=["name", "total_videos", "total_tracks"],
+        custom_data=["name", "total_videos"],
     )
     fig.update_traces(
         marker=dict(size=13, color="#E07A5F", opacity=1.0),
         hovertemplate=(
-            "<b>Site</b>: %{customdata[0]}<br><br>"
-            "<b>N° of videos</b>: %{customdata[1]}<br>"
-            "<b>N° of tracks</b>: %{customdata[2]}"
-            "<extra></extra>"
+            "<b>Site</b>: %{customdata[0]}<br><br>" "<b>N° of videos</b>: %{customdata[1]}" "<extra></extra>"
         ),
     )
     fig.add_trace(
@@ -436,8 +433,8 @@ def update_computational_timing(date_range: list[str | None], sites: list[str], 
     Input("site-filter", "value"),
     Input("hour-range-slider", "value"),
 )
-def update_tracks_histogram(date_range: list[str | None], sites: list[str], hour_range: list[int]):
-    """Display histogram of tracks per video"""
+def update_duration_histogram(date_range: list[str | None], sites: list[str], hour_range: list[int]):
+    """Display histogram of video duration"""
 
     if not date_range[0] or not date_range[1]:
         raise PreventUpdate
@@ -450,22 +447,20 @@ def update_tracks_histogram(date_range: list[str | None], sites: list[str], hour
         "start_hour": hour_range[0],
         "end_hour": hour_range[1],
     }
-    df_tracks = db.run_sql_file("home/get_tracks.sql", parameters=params)
+    df_duration = db.run_sql_file("home/get_info.sql", parameters=params)
 
     # Create figure.
     fig = px.histogram(
-        df_tracks,
-        x="total",
-        text_auto=True,
+        df_duration,
+        x="duration",
         opacity=0.8,
     )
     fig.update_traces(
-        hovertemplate="<b>N° of videos</b>: %{y}<br><b>N° of tracks</b>: %{x}<br><extra></extra>",
+        hovertemplate="<b>N° of videos</b>: %{y}<br><b>Duration</b>: %{x}<br><extra></extra>",
         xbins=dict(size=1),
     )
     fig.update_layout(
-        bargap=0.2,
-        xaxis=dict(title="Number of tracks", dtick=1),
+        xaxis=dict(title="Duration (s)", dtick=1),
         yaxis=dict(title="Number of videos", dtick=1),
         margin=dict(l=20, r=20, t=20, b=20),
         autosize=True,
@@ -475,12 +470,12 @@ def update_tracks_histogram(date_range: list[str | None], sites: list[str], hour
 
 
 @callback(
-    Output("daily-sightings-chart", "figure"),
+    Output("daily-video-chart", "figure"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
     Input("hour-range-slider", "value"),
 )
-def update_daily_sightings(date_range: list[str | None], sites: list[str], hour_range: list[int]):
+def update_daily_video(date_range: list[str | None], sites: list[str], hour_range: list[int]):
     """Display area chart of daily detected animals"""
 
     if not date_range[0] or not date_range[1]:
@@ -494,10 +489,11 @@ def update_daily_sightings(date_range: list[str | None], sites: list[str], hour_
         "start_hour": hour_range[0],
         "end_hour": hour_range[1],
     }
-    df_daily = db.run_sql_file("home/get_tracks.sql", parameters=params)
+    df_daily = db.run_sql_file("home/get_info.sql", parameters=params)
+    df_daily["created_at"] = pd.to_datetime(df_daily["created_at"]).dt.tz_localize(None).dt.date
     df_filtered = (
-        df_daily.groupby("created_at")["total"]
-        .sum()
+        df_daily.groupby("created_at")["id"]
+        .count()
         .reindex(pd.date_range(start=date_range[0], end=date_range[1], freq="D"), fill_value=0)
         .rename_axis("created_at")
         .reset_index()
@@ -508,7 +504,7 @@ def update_daily_sightings(date_range: list[str | None], sites: list[str], hour_
         [
             go.Scatter(
                 x=df_filtered["created_at"],
-                y=df_filtered["total"],
+                y=df_filtered["id"],
                 fill="tozeroy",
                 mode="markers+lines",
                 fillgradient=dict(
@@ -519,12 +515,12 @@ def update_daily_sightings(date_range: list[str | None], sites: list[str], hour_
         ]
     )
     fig.update_traces(
-        hovertemplate="<b>N° of tracks</b>: %{y}<br>" "<b>Datetime</b>: %{x}, %{x|%a}" "<extra></extra>",
+        hovertemplate="<b>N° of videos</b>: %{y}<br>" "<b>Datetime</b>: %{x}, %{x|%a}" "<extra></extra>",
     )
     fig.update_layout(
         showlegend=False,
         xaxis=dict(title="Datetime"),
-        yaxis=dict(title="Number of tracks"),
+        yaxis=dict(title="Number of videos"),
         margin=dict(l=20, r=20, t=20, b=20),
         autosize=True,
     )
@@ -533,12 +529,12 @@ def update_daily_sightings(date_range: list[str | None], sites: list[str], hour_
 
 
 @callback(
-    Output("hourly-heatmap-chart", "figure"),
+    Output("hourly-video-chart", "figure"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
     Input("hour-range-slider", "value"),
 )
-def update_hourly_flow(date_range: list[str | None], sites: list[str], hour_range: list[int]):
+def update_hourly_video(date_range: list[str | None], sites: list[str], hour_range: list[int]):
     """Display hourly heatmap of detected animals"""
 
     if not date_range[0] or not date_range[1]:
@@ -552,23 +548,29 @@ def update_hourly_flow(date_range: list[str | None], sites: list[str], hour_rang
         "start_hour": hour_range[0],
         "end_hour": hour_range[1],
     }
-    df_hourly = db.run_sql_file("home/get_tracks_hourly.sql", parameters=params)
+    df_hourly = db.run_sql_file("home/get_info.sql", parameters=params)
+    df_hourly["created_at"] = pd.to_datetime(df_hourly["created_at"]).dt.tz_localize(None)
     df_filtered = (
         df_hourly.set_index("created_at")
-        .reindex(pd.date_range(start=f"{date_range[0]} 00:00:00", end=f"{date_range[1]} 23:00:00", freq="h"))
+        .resample("h")["id"]
+        .count()
+        .reindex(
+            pd.date_range(start=f"{date_range[0]} 00:00:00", end=f"{date_range[1]} 23:00:00", freq="h"), fill_value=0
+        )
         .rename_axis("created_at")
         .reset_index()
-        .fillna(0)
     )
 
     df_filtered["date"] = df_filtered["created_at"].dt.date
     df_filtered["hour"] = df_filtered["created_at"].dt.hour
-    df_pivot = df_filtered.pivot_table(index="hour", columns="date", values="total", aggfunc="sum", fill_value=0)
+    df_pivot = df_filtered.pivot_table(index="hour", columns="date", values="id", aggfunc="sum", fill_value=0)
     df_pivot = df_pivot.loc[hour_range[0] : hour_range[1] - 1]
     df_pivot.index = [f"{int(h):02d}:00" for h in df_pivot.index]
 
     # Create figure.
-    fig = px.imshow(df_pivot, aspect="auto", color_continuous_scale=CONTINUOUS_SCALE)
+    fig = px.imshow(
+        df_pivot, aspect="auto", color_continuous_scale=CONTINUOUS_SCALE, zmin=0, zmax=max(df_pivot.max().max(), 1)
+    )
     fig.update_traces(
         hovertemplate="<b>N° of tracks</b>: %{z}<br>"
         "<b>Datetime</b>: %{x}<br>"

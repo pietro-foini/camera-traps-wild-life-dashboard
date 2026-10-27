@@ -25,3 +25,9 @@ STATUS_COLOR_MAP = {
     "PENDING": "#e09f3e",
     "FAILED": "#c94a4a",
 }
+
+EDIT_COLOR_MAP = {
+    "Confirmed": "#E07A5F",
+    "Relabeled": "#3D5A80",
+    "Added": "#F2CC8F",
+}
