@@ -9,4 +9,4 @@ WHERE TRUE
   AND EXTRACT(HOUR FROM vi.created_at) >= :start_hour
   AND EXTRACT(HOUR FROM vi.created_at) < :end_hour
   AND (:sites IS NULL OR vi.site = ANY(:sites))
-  AND (:species IS NULL OR vv.label = :species)
+  AND (:species IS NULL OR vv.label = ANY(:species))

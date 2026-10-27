@@ -6,6 +6,7 @@ from dash_iconify import DashIconify
 from flask import session
 
 from camera_traps.api.server import server
+from camera_traps.data import Classes
 from camera_traps.settings import SITES
 
 app = Dash(
@@ -64,8 +65,18 @@ app.layout = dmc.MantineProvider(
                                 dmc.Group(
                                     gap="xs",
                                     children=[
-                                        DashIconify(icon="tabler:paw", width=24, color="white"),
-                                        dmc.Text(children="Dashboard", fw=700, size="lg", mr="md", c="white"),
+                                        dcc.Link(
+                                            href="/",
+                                            style={"textDecoration": "none"},
+                                            children=dmc.Group(
+                                                gap="xs",
+                                                mr="md",
+                                                children=[
+                                                    DashIconify(icon="tabler:paw", width=24, color="white"),
+                                                    dmc.Text(children="Dashboard", fw=700, size="lg", c="white"),
+                                                ],
+                                            ),
+                                        ),
                                         *[
                                             dmc.NavLink(
                                                 label=page["name"],
@@ -79,6 +90,7 @@ app.layout = dmc.MantineProvider(
                                                 style={"borderRadius": "6px"},
                                             )
                                             for page in page_registry.values()
+                                            if page["path"] != "/"
                                         ],
                                     ],
                                 ),
@@ -151,6 +163,7 @@ app.layout = dmc.MantineProvider(
                 dmc.AppShellMain(
                     children=[
                         dmc.Paper(
+                            id="filters-bar",
                             px="md",
                             py="sm",
                             radius=0,
@@ -176,11 +189,11 @@ app.layout = dmc.MantineProvider(
                                     opened=True,
                                     children=[
                                         dmc.SimpleGrid(
-                                            cols={"base": 1, "sm": 2, "md": 4},
-                                            spacing="lg",
+                                            cols={"base": 1, "sm": 2, "md": 5},
+                                            spacing="md",
                                             pt="md",
                                             pb="xs",
-                                            px="xl",
+                                            px="md",
                                             children=[
                                                 dmc.DatePickerInput(
                                                     id="date-range-picker",
@@ -199,7 +212,15 @@ app.layout = dmc.MantineProvider(
                                                     data=[
                                                         {"value": k, "label": v.get("name")} for k, v in SITES.items()
                                                     ],
-                                                    searchable=True,
+                                                    clearable=True,
+                                                ),
+                                                dmc.MultiSelect(
+                                                    id="class-filter",
+                                                    value=[],
+                                                    label="Class",
+                                                    placeholder="All",
+                                                    data=[c.value for c in Classes],
+                                                    clearable=True,
                                                 ),
                                                 dmc.Stack(
                                                     gap=6,
@@ -267,17 +288,19 @@ app.layout = dmc.MantineProvider(
 
 @callback(
     Output("session-user-store", "data"),
+    Output("filters-bar", "display"),
     Input("_pages_location", "pathname"),
 )
-def store_user_session(_):
-    """Read session user data"""
+def store_user_session(pathname: str):
+    """Read session user data and hide filters on welcome page"""
 
     user = session.get("user", {})
-
-    return {
+    user_data = {
         "email": user.get("email", ""),
         "name": user.get("name", "User"),
     }
+
+    return user_data, "none" if pathname == "/" else "block"
 
 
 @callback(
@@ -326,6 +349,7 @@ def update_hour_badge(hours: list[int]):
 @callback(
     Output("date-range-picker", "value"),
     Output("site-filter", "value"),
+    Output("class-filter", "value"),
     Output("hour-range-slider", "value"),
     Input("reset-filters-btn", "n_clicks"),
     prevent_initial_call=True,
@@ -333,4 +357,4 @@ def update_hour_badge(hours: list[int]):
 def reset_filters(n_clicks: int):
     """Reset filters to default values"""
 
-    return [datetime.now().date() - timedelta(days=30), datetime.now().date()], [], [0, 24]
+    return [datetime.now().date() - timedelta(days=30), datetime.now().date()], [], [], [0, 24]

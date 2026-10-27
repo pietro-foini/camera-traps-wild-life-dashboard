@@ -2,8 +2,10 @@ import dash
 import dash_mantine_components as dmc
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 from dash import Input, Output, callback, dcc
 from dash.exceptions import PreventUpdate
+from plotly.subplots import make_subplots
 
 from camera_traps.api.components import create_card, create_title
 from camera_traps.api.config import CONTINUOUS_SCALE, EDIT_COLOR_MAP, GRAPH_CONFIG
@@ -81,14 +83,14 @@ layout = dmc.Container(
                                                             gap="xs",
                                                             children=[
                                                                 create_title(
-                                                                    title="Prediction confidence by classes",
-                                                                    info="Displays the mean confidence percentage across all predictions for each class, indicating how certain the model is when identifying each animal.",
+                                                                    title="Track length by class",
+                                                                    info="Displays the distribution of track lengths (in frames) for each predicted class, showing how long each animal typically remains visible in the videos.",
                                                                 ),
                                                                 dcc.Loading(
                                                                     color="var(--primary)",
                                                                     type="circle",
                                                                     children=dcc.Graph(
-                                                                        id="predicted-species-confidence",
+                                                                        id="species-track-length-graph",
                                                                         config=GRAPH_CONFIG,
                                                                         style={"height": "32vh", "width": "100%"},
                                                                     ),
@@ -168,27 +170,9 @@ layout = dmc.Container(
                                                 children=dmc.Stack(
                                                     gap="xs",
                                                     children=[
-                                                        dmc.Box(
-                                                            style={"position": "relative"},
-                                                            children=[
-                                                                create_title(
-                                                                    title="Predicted hourly tracks",
-                                                                    info="Hourly distribution of predicted tracks.",
-                                                                ),
-                                                                dmc.Select(
-                                                                    id="predicted-species-filter",
-                                                                    placeholder="All classes",
-                                                                    clearable=True,
-                                                                    size="xs",
-                                                                    w=140,
-                                                                    data=[c.value for c in Classes],
-                                                                    style={
-                                                                        "position": "absolute",
-                                                                        "right": 0,
-                                                                        "top": 0,
-                                                                    },
-                                                                ),
-                                                            ],
+                                                        create_title(
+                                                            title="Predicted hourly tracks",
+                                                            info="Hourly distribution of predicted tracks.",
                                                         ),
                                                         dcc.Loading(
                                                             color="var(--primary)",
@@ -345,27 +329,9 @@ layout = dmc.Container(
                                                 children=dmc.Stack(
                                                     gap="xs",
                                                     children=[
-                                                        dmc.Box(
-                                                            style={"position": "relative"},
-                                                            children=[
-                                                                create_title(
-                                                                    title="Validated hourly tracks",
-                                                                    info="Hourly distribution of validated tracks.",
-                                                                ),
-                                                                dmc.Select(
-                                                                    id="validated-species-filter",
-                                                                    placeholder="All classes",
-                                                                    clearable=True,
-                                                                    size="xs",
-                                                                    w=140,
-                                                                    data=[c.value for c in Classes],
-                                                                    style={
-                                                                        "position": "absolute",
-                                                                        "right": 0,
-                                                                        "top": 0,
-                                                                    },
-                                                                ),
-                                                            ],
+                                                        create_title(
+                                                            title="Validated hourly tracks",
+                                                            info="Hourly distribution of validated tracks.",
                                                         ),
                                                         dcc.Loading(
                                                             color="var(--primary)",
@@ -399,9 +365,10 @@ layout = dmc.Container(
     Output("kpi-predicted-classes", "children"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
+    Input("class-filter", "value"),
     Input("hour-range-slider", "value"),
 )
-def update_prediction_kpi(date_range: list[str | None], sites: list[str], hour_range: list[int]):
+def update_prediction_kpi(date_range: list[str | None], sites: list[str], classes: list[str], hour_range: list[int]):
     """Display the prediction KPI cards"""
 
     if not date_range[0] or not date_range[1]:
@@ -414,6 +381,7 @@ def update_prediction_kpi(date_range: list[str | None], sites: list[str], hour_r
         "sites": sites if sites else None,
         "start_hour": hour_range[0],
         "end_hour": hour_range[1],
+        "species": classes if classes else None,
     }
     df_kpi = db.run_sql_file("analytics/predictions/get_kpi.sql", parameters=params)
 
@@ -422,7 +390,7 @@ def update_prediction_kpi(date_range: list[str | None], sites: list[str], hour_r
     avg_confidence = (df_kpi["avg_confidence"].iloc[0] or 0) * 100
     total_species = df_kpi["total_species"].iloc[0] or 0
 
-    return (f"{total_videos:,.0f}", f"{total_tracks:,.0f}", f"{avg_confidence:.1f}%", f"{total_species:,.0f}")
+    return f"{total_videos:,.0f}", f"{total_tracks:,.0f}", f"{avg_confidence:.1f}%", f"{total_species:,.0f}"
 
 
 @callback(
@@ -432,9 +400,10 @@ def update_prediction_kpi(date_range: list[str | None], sites: list[str], hour_r
     Output("kpi-human-corrections", "children"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
+    Input("class-filter", "value"),
     Input("hour-range-slider", "value"),
 )
-def update_validation_kpi(date_range: list[str | None], sites: list[str], hour_range: list[int]):
+def update_validation_kpi(date_range: list[str | None], sites: list[str], classes: list[str], hour_range: list[int]):
     """Display the validation KPI cards"""
 
     if not date_range[0] or not date_range[1]:
@@ -447,6 +416,7 @@ def update_validation_kpi(date_range: list[str | None], sites: list[str], hour_r
         "sites": sites if sites else None,
         "start_hour": hour_range[0],
         "end_hour": hour_range[1],
+        "species": classes if classes else None,
     }
     df_kpi = db.run_sql_file("analytics/validation/get_kpi.sql", parameters=params)
 
@@ -455,22 +425,20 @@ def update_validation_kpi(date_range: list[str | None], sites: list[str], hour_r
     modified = df_kpi["total_modified"].iloc[0] or 0
     accuracy = ((total_tracks - modified) / total_tracks * 100) if total_tracks > 0 else 0
 
-    return (
-        f"{total_videos:,.0f}",
-        f"{total_tracks:,.0f}",
-        f"{accuracy:.1f}%",
-        f"{modified:,.0f}",
-    )
+    return f"{total_videos:,.0f}", f"{total_tracks:,.0f}", f"{accuracy:.1f}%", f"{modified:,.0f}"
 
 
 @callback(
-    Output("predicted-species-confidence", "figure"),
+    Output("species-track-length-graph", "figure"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
+    Input("class-filter", "value"),
     Input("hour-range-slider", "value"),
 )
-def update_species_confidence(date_range: list[str | None], sites: list[str], hour_range: list[int]):
-    """Display horizontal bar chart of average confidence per species"""
+def update_track_length_by_species(
+    date_range: list[str | None], sites: list[str], classes: list[str], hour_range: list[int]
+):
+    """Display horizontal box plot of track length (frames) by species"""
 
     if not date_range[0] or not date_range[1]:
         raise PreventUpdate
@@ -482,25 +450,32 @@ def update_species_confidence(date_range: list[str | None], sites: list[str], ho
         "sites": sites if sites else None,
         "start_hour": hour_range[0],
         "end_hour": hour_range[1],
+        "species": classes if classes else None,
     }
-    df_confidence = db.run_sql_file("analytics/predictions/get_confidence.sql", parameters=params)
+    df_lengths = db.run_sql_file("analytics/predictions/get_track_lengths.sql", parameters=params)
+    df_lengths["species"] = df_lengths["species"].str.capitalize()
 
     # Create figure.
-    fig = px.bar(
-        df_confidence,
-        x="avg_confidence",
+    fig = px.box(
+        df_lengths,
+        x="track_length",
         y="species",
-        color_discrete_sequence=["#E07A5F"],
-        opacity=0.9,
+        color="species",
         orientation="h",
-        text_auto=".1f",
+        points="outliers",
+        color_discrete_sequence=["#2E6F40"],
     )
-    fig.update_traces(hovertemplate="<b>Confidence</b>: %{x:.1f}%<br>" "<b>Classes</b>: %{y}<br>" "<extra></extra>")
+    fig.update_traces(
+        opacity=0.75,
+        name="",
+    )
     fig.update_layout(
-        legend=dict(title_text=""),
-        xaxis=dict(title="Average confidence (%)", range=[0, 100]),
+        showlegend=False,
+        hovermode="y unified",
+        hoverlabel=dict(bgcolor="rgba(255, 255, 255, 0.9)"),
+        xaxis=dict(title="Track length (frames)", hoverformat=".0f"),
         yaxis=dict(title="Classes"),
-        margin=dict(l=20, r=20, t=20, b=20),
+        margin=dict(l=20, r=20, t=10, b=20),
         autosize=True,
     )
 
@@ -511,9 +486,12 @@ def update_species_confidence(date_range: list[str | None], sites: list[str], ho
     Output("validation-outcome-chart", "figure"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
+    Input("class-filter", "value"),
     Input("hour-range-slider", "value"),
 )
-def update_validation_outcome(date_range: list[str | None], sites: list[str], hour_range: list[int]):
+def update_validation_outcome(
+    date_range: list[str | None], sites: list[str], classes: list[str], hour_range: list[int]
+):
     """Display donut chart of confirmed vs modified vs manual additions"""
 
     if not date_range[0] or not date_range[1]:
@@ -526,6 +504,7 @@ def update_validation_outcome(date_range: list[str | None], sites: list[str], ho
         "sites": sites if sites else None,
         "start_hour": hour_range[0],
         "end_hour": hour_range[1],
+        "species": classes if classes else None,
     }
     df_validation = db.run_sql_file("analytics/validation/get_validation.sql", parameters=params)
     df_validation = df_validation.groupby("validation_status", as_index=False).agg(total=("total", "sum"))
@@ -560,10 +539,13 @@ def update_validation_outcome(date_range: list[str | None], sites: list[str], ho
     Output("predicted-species-histogram", "figure"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
+    Input("class-filter", "value"),
     Input("hour-range-slider", "value"),
 )
-def update_predictions_by_species(date_range: list[str | None], sites: list[str], hour_range: list[int]):
-    """Display horizontal bar chart of predicted species"""
+def update_predictions_by_species(
+    date_range: list[str | None], sites: list[str], classes: list[str], hour_range: list[int]
+):
+    """Display horizontal bar chart of predicted species and box plot of confidence"""
 
     if not date_range[0] or not date_range[1]:
         raise PreventUpdate
@@ -575,24 +557,74 @@ def update_predictions_by_species(date_range: list[str | None], sites: list[str]
         "sites": sites if sites else None,
         "start_hour": hour_range[0],
         "end_hour": hour_range[1],
+        "species": classes if classes else None,
     }
     df_predictions = db.run_sql_file("analytics/predictions/get_predictions.sql", parameters=params)
+    df_predictions["species"] = df_predictions["species"].str.capitalize()
+    df_confidence = db.run_sql_file("analytics/predictions/get_confidence.sql", parameters=params)
+    df_confidence["species"] = df_confidence["species"].str.capitalize()
 
     # Create figure.
-    fig = px.bar(
-        df_predictions,
-        x="total",
-        y="species",
-        opacity=0.9,
-        orientation="h",
-        text_auto=True,
+    fig = make_subplots(
+        rows=1,
+        cols=2,
+        shared_yaxes=True,
+        horizontal_spacing=0.04,
+        column_widths=[0.55, 0.45],
     )
-    fig.update_traces(hovertemplate="<b>N° of tracks</b>: %{x}<br>" "<b>Classes</b>: %{y}<br>" "<extra></extra>")
+    fig.add_trace(
+        go.Bar(
+            x=df_predictions["total"],
+            y=df_predictions["species"],
+            orientation="h",
+            opacity=0.9,
+            text=df_predictions["total"],
+            textposition="auto",
+            marker=dict(color="#2E6F40"),
+            name="",
+            hovertemplate="<b>N° of tracks</b>: %{x}<extra></extra>",
+        ),
+        row=1,
+        col=1,
+    )
+    fig.add_trace(
+        go.Box(
+            x=df_confidence["avg_confidence"],
+            y=df_confidence["species"],
+            orientation="h",
+            boxpoints="outliers",
+            opacity=0.75,
+            marker=dict(color="#E07A5F"),
+            name="",
+        ),
+        row=1,
+        col=2,
+    )
     fig.update_layout(
-        legend=dict(title_text=""),
-        xaxis=dict(title="Number of tracks"),
-        yaxis=dict(title="Classes"),
-        margin=dict(l=20, r=20, t=20, b=20),
+        showlegend=False,
+        hovermode="y unified",
+        hoverlabel=dict(bgcolor="rgba(255, 255, 255, 0.9)"),
+        xaxis=dict(
+            title="Number of tracks",
+            zeroline=False,
+        ),
+        xaxis2=dict(
+            title="Confidence (%)",
+            hoverformat=".1f",
+            zeroline=False,
+            showgrid=True,
+        ),
+        yaxis=dict(
+            title="Classes",
+            categoryorder="array",
+            categoryarray=df_predictions["species"],
+        ),
+        yaxis2=dict(
+            showline=True,
+            linecolor="lightgray",
+            linewidth=1,
+        ),
+        margin=dict(l=20, r=20, t=10, b=20),
         autosize=True,
     )
 
@@ -603,9 +635,12 @@ def update_predictions_by_species(date_range: list[str | None], sites: list[str]
     Output("validated-species-bar", "figure"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
+    Input("class-filter", "value"),
     Input("hour-range-slider", "value"),
 )
-def update_validation_outcome_by_species(date_range: list[str | None], sites: list[str], hour_range: list[int]):
+def update_validation_outcome_by_species(
+    date_range: list[str | None], sites: list[str], classes: list[str], hour_range: list[int]
+):
     """Display horizontal stacked bar chart of confirmed vs modified per species"""
 
     if not date_range[0] or not date_range[1]:
@@ -618,9 +653,11 @@ def update_validation_outcome_by_species(date_range: list[str | None], sites: li
         "sites": sites if sites else None,
         "start_hour": hour_range[0],
         "end_hour": hour_range[1],
+        "species": classes if classes else None,
     }
     df_validation = db.run_sql_file("analytics/validation/get_validation.sql", parameters=params)
     df_validation = df_validation.groupby(["species", "validation_status"], as_index=False).agg(total=("total", "sum"))
+    df_validation["species"] = df_validation["species"].str.capitalize()
 
     # Create figure.
     fig = px.bar(
@@ -634,7 +671,7 @@ def update_validation_outcome_by_species(date_range: list[str | None], sites: li
         category_orders={"status": ["Confirmed", "Relabeled", "Added"]},
     )
     fig.update_traces(
-        hovertemplate="<b>Class</b>: %{y}<br><b>Count</b>: %{x}<extra></extra>",
+        hovertemplate="<b>Class</b>: %{y}<br><b>N° of tracks</b>: %{x}<extra></extra>",
     )
     fig.update_layout(
         xaxis=dict(title="Number of tracks"),
@@ -651,9 +688,10 @@ def update_validation_outcome_by_species(date_range: list[str | None], sites: li
     Output("predicted-tracks-histogram", "figure"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
+    Input("class-filter", "value"),
     Input("hour-range-slider", "value"),
 )
-def update_tracks_histogram(date_range: list[str | None], sites: list[str], hour_range: list[int]):
+def update_tracks_histogram(date_range: list[str | None], sites: list[str], classes: list[str], hour_range: list[int]):
     """Display histogram of tracks per video"""
 
     if not date_range[0] or not date_range[1]:
@@ -666,6 +704,7 @@ def update_tracks_histogram(date_range: list[str | None], sites: list[str], hour
         "sites": sites if sites else None,
         "start_hour": hour_range[0],
         "end_hour": hour_range[1],
+        "species": classes if classes else None,
     }
     df_tracks = db.run_sql_file("analytics/predictions/get_tracks.sql", parameters=params)
 
@@ -696,9 +735,10 @@ def update_tracks_histogram(date_range: list[str | None], sites: list[str], hour
     Output("confusion-matrix-chart", "figure"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
+    Input("class-filter", "value"),
     Input("hour-range-slider", "value"),
 )
-def update_confusion_matrix(date_range: list[str | None], sites: list[str], hour_range: list[int]):
+def update_confusion_matrix(date_range: list[str | None], sites: list[str], classes: list[str], hour_range: list[int]):
     """Display confusion matrix between predicted label and validated label"""
 
     if not date_range[0] or not date_range[1]:
@@ -711,8 +751,12 @@ def update_confusion_matrix(date_range: list[str | None], sites: list[str], hour
         "sites": sites if sites else None,
         "start_hour": hour_range[0],
         "end_hour": hour_range[1],
+        "species": classes if classes else None,
     }
     df_cm = db.run_sql_file("analytics/validation/get_confusion.sql", parameters=params)
+    df_cm["predicted_label"] = df_cm["predicted_label"].str.capitalize()
+    df_cm["validated_label"] = df_cm["validated_label"].str.capitalize()
+
     df_pivot = df_cm.pivot_table(
         index="validated_label", columns="predicted_label", values="total", aggfunc="sum", fill_value=0
     )
@@ -727,7 +771,7 @@ def update_confusion_matrix(date_range: list[str | None], sites: list[str], hour
     fig.update_traces(
         hovertemplate="<b>Predicted</b>: %{x}<br>"
         "<b>Validated</b>: %{y}<br>"
-        "<b>Count</b>: %{z}<br>"
+        "<b>N° of tracks</b>: %{z}<br>"
         "<extra></extra>"
     )
     fig.update_layout(
@@ -735,7 +779,7 @@ def update_confusion_matrix(date_range: list[str | None], sites: list[str], hour
         yaxis=dict(title="Validated classes", showgrid=False, zeroline=False),
         margin=dict(l=20, r=20, t=20, b=20),
         autosize=True,
-        coloraxis_colorbar=dict(title="Tracks"),
+        coloraxis_colorbar=dict(title="Number of tracks"),
         coloraxis_colorbar_title_side="right",
         hoverlabel=dict(
             bgcolor="#2E6F40",
@@ -751,10 +795,10 @@ def update_confusion_matrix(date_range: list[str | None], sites: list[str], hour
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
     Input("hour-range-slider", "value"),
-    Input("predicted-species-filter", "value"),
+    Input("class-filter", "value"),
 )
 def update_predicted_hourly_heatmap(
-    date_range: list[str | None], sites: list[str], hour_range: list[int], species: str | None
+    date_range: list[str | None], sites: list[str], hour_range: list[int], classes: list[str]
 ):
     """Display hourly heatmap of predicted tracks"""
 
@@ -768,7 +812,7 @@ def update_predicted_hourly_heatmap(
         "sites": sites if sites else None,
         "start_hour": hour_range[0],
         "end_hour": hour_range[1],
-        "species": species if species else None,
+        "species": classes if classes else None,
     }
     df_hourly = db.run_sql_file("analytics/predictions/get_hourly_tracks.sql", parameters=params)
     df_hourly["created_at"] = pd.to_datetime(df_hourly["created_at"]).dt.tz_localize(None)
@@ -804,7 +848,7 @@ def update_predicted_hourly_heatmap(
         yaxis=dict(title="Hour", showgrid=False, zeroline=False),
         margin=dict(l=20, r=20, t=20, b=20),
         autosize=True,
-        coloraxis_colorbar=dict(title="Trackers"),
+        coloraxis_colorbar=dict(title="Number of tracks"),
         coloraxis_colorbar_title_side="right",
         hoverlabel=dict(
             bgcolor="#2E6F40",
@@ -819,11 +863,11 @@ def update_predicted_hourly_heatmap(
     Output("validated-hourly-heatmap", "figure"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
+    Input("class-filter", "value"),
     Input("hour-range-slider", "value"),
-    Input("validated-species-filter", "value"),
 )
 def update_validated_hourly_heatmap(
-    date_range: list[str | None], sites: list[str], hour_range: list[int], species: str | None
+    date_range: list[str | None], sites: list[str], classes: list[str], hour_range: list[int]
 ):
     """Display hourly heatmap of validated tracks"""
 
@@ -837,7 +881,7 @@ def update_validated_hourly_heatmap(
         "sites": sites if sites else None,
         "start_hour": hour_range[0],
         "end_hour": hour_range[1],
-        "species": species if species else None,
+        "species": classes if classes else None,
     }
     df_hourly = db.run_sql_file("analytics/validation/get_hourly_tracks.sql", parameters=params)
     df_hourly["created_at"] = pd.to_datetime(df_hourly["created_at"]).dt.tz_localize(None)
@@ -873,7 +917,7 @@ def update_validated_hourly_heatmap(
         yaxis=dict(title="Hour", showgrid=False, zeroline=False),
         margin=dict(l=20, r=20, t=20, b=20),
         autosize=True,
-        coloraxis_colorbar=dict(title="Trackers"),
+        coloraxis_colorbar=dict(title="Number of tracks"),
         coloraxis_colorbar_title_side="right",
         hoverlabel=dict(
             bgcolor="#2E6F40",

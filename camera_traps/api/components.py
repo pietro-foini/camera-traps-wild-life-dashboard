@@ -1,4 +1,5 @@
 import dash_mantine_components as dmc
+from dash import html
 from dash_iconify import DashIconify
 
 
@@ -75,4 +76,32 @@ def create_card(id: str, title: str, info: str = ""):
                 mt="xs",
             ),
         ],
+    )
+
+
+def create_card_image(image: str, category: str):
+    """Create a card with the given image and category"""
+
+    return dmc.Paper(
+        children=[
+            html.Div(
+                [
+                    dmc.Text(category.upper(), c="white", opacity=0.9, fw=700),
+                ]
+            ),
+            dmc.Button(children="Explore", variant="white", color="dark"),
+        ],
+        shadow="md",
+        p="xl",
+        radius="md",
+        style={
+            "backgroundImage": f"url({image})",
+            "height": 440,
+            "display": "flex",
+            "flexDirection": "column",
+            "justifyContent": "space-between",
+            "alignItems": "flex-start",
+            "backgroundSize": "cover",
+            "backgroundPosition": "center",
+        },
     )

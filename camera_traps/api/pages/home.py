@@ -13,7 +13,7 @@ from camera_traps.data import Classes
 from camera_traps.db.config import db
 from camera_traps.settings import SITES
 
-dash.register_page(__name__, path="/", title="Home", order=0)
+dash.register_page(__name__, path="/home", title="Home", order=0)
 
 
 layout = dmc.Container(
@@ -48,7 +48,7 @@ layout = dmc.Container(
                                             create_card(
                                                 id="kpi-total-classes",
                                                 title="Total classes",
-                                                info=f"Number of distinct classes that the model could recognize: {', '.join(c.value for c in Classes)}.",
+                                                info=f"Number of total classes that the model could recognize: {', '.join(c.value for c in Classes)}.",
                                             ),
                                         ],
                                     ),
