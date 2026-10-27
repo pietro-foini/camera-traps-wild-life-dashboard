@@ -18,3 +18,10 @@ CONTINUOUS_SCALE = [
     (0.5, "rgba(133, 193, 150, 0.3)"),
     (1.0, "rgba(133, 193, 150, 0.8)"),
 ]
+
+STATUS_COLOR_MAP = {
+    "COMPLETED": "#2d6a3e",
+    "PROCESSING": "#3b82a6",
+    "PENDING": "#e09f3e",
+    "FAILED": "#c94a4a",
+}

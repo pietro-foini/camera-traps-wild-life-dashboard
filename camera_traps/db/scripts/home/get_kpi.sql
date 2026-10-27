@@ -1,8 +1,7 @@
 SELECT
     vi.site,
     COUNT(DISTINCT vi.id) AS total_videos,
-    COUNT(DISTINCT (vo.video_input_id, vo.tracker_id)) FILTER (WHERE vo.tracker_id IS NOT NULL) AS total_tracks,
-    COUNT(DISTINCT vo.label) AS total_species
+    COUNT(DISTINCT (vo.video_input_id, vo.tracker_id)) FILTER (WHERE vo.tracker_id IS NOT NULL) AS total_tracks
 FROM video_inputs AS vi
 LEFT JOIN video_outputs AS vo
     ON vi.id = vo.video_input_id

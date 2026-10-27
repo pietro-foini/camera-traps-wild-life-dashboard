@@ -277,7 +277,7 @@ def store_user_session(_):
 
     return {
         "email": user.get("email", ""),
-        "nickname": user.get("nickname", "User"),
+        "name": user.get("name", "User"),
     }
 
 
@@ -311,7 +311,7 @@ def switch_theme(theme_value: str):
 def update_header_user(user_data: dict[str, str]):
     """Update the user tooltip"""
 
-    return user_data.get("nickname", "Guest")
+    return user_data.get("name", "Guest")
 
 
 @callback(

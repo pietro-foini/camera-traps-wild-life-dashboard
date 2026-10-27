@@ -8,7 +8,8 @@ from dash import Input, Output, callback, dcc, html
 from dash.exceptions import PreventUpdate
 
 from camera_traps.api.components import create_card, create_title
-from camera_traps.api.config import CONTINUOUS_SCALE, GRAPH_CONFIG
+from camera_traps.api.config import CONTINUOUS_SCALE, GRAPH_CONFIG, STATUS_COLOR_MAP
+from camera_traps.data import Classes
 from camera_traps.db.config import db
 from camera_traps.settings import SITES
 
@@ -42,12 +43,12 @@ layout = dmc.Container(
                                             create_card(
                                                 id="kpi-total-tracks",
                                                 title="Total tracks",
-                                                info="Number of total distinct individual tracks detected.",
+                                                info="Number of total distinct tracks detected.",
                                             ),
                                             create_card(
-                                                id="kpi-total-species",
-                                                title="Total species",
-                                                info="Number of total distinct species detected.",
+                                                id="kpi-total-labels",
+                                                title="Labels",
+                                                info=f"Number of distinct labels that the model could recognize: {', '.join(c.value for c in Classes)}.",
                                             ),
                                         ],
                                     ),
@@ -78,7 +79,7 @@ layout = dmc.Container(
                                                 dcc.Graph(
                                                     id="camera-map",
                                                     config=GRAPH_CONFIG | {"scrollZoom": True},
-                                                    style={"height": "35vh", "width": "100%"},
+                                                    style={"height": "34vh", "width": "100%"},
                                                 ),
                                             ],
                                         ),
@@ -100,7 +101,7 @@ layout = dmc.Container(
                                     children=[
                                         create_title(
                                             "Processing status",
-                                            info="Proportion of videos categorized by their current processing state.",
+                                            info="Proportion of videos categorized by their current processing state: PENDING, PROCESSING, COMPLETED, FAILED.",
                                         ),
                                         dcc.Loading(
                                             color="var(--primary)",
@@ -140,8 +141,8 @@ layout = dmc.Container(
                                     gap="xs",
                                     children=[
                                         create_title(
-                                            "Predicted species distribution",
-                                            info="Total number of individual tracks detected for each identified species.",
+                                            "Tracks per video distribution",
+                                            info="Distribution of videos by the number of tracks detected in each recording.",
                                         ),
                                         dcc.Loading(
                                             color="var(--primary)",
@@ -226,7 +227,7 @@ layout = dmc.Container(
 @callback(
     Output("kpi-total-videos", "children"),
     Output("kpi-total-tracks", "children"),
-    Output("kpi-total-species", "children"),
+    Output("kpi-total-labels", "children"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
     Input("hour-range-slider", "value"),
@@ -246,12 +247,11 @@ def update_kpi(date_range: list[str | None], sites: list[str], hour_range: list[
         "end_hour": hour_range[1],
     }
     df_kpi = db.run_sql_file("home/get_kpi.sql", parameters=params)
-    df_species = db.run_sql_file("home/get_species.sql", parameters=params)
 
     return (
         f"{df_kpi['total_videos'].sum():,.0f}",
         f"{df_kpi['total_tracks'].sum():,.0f}",
-        f"{df_species['species'].nunique():,.0f}",
+        f"{len(Classes):,.0f}",
     )
 
 
@@ -285,15 +285,14 @@ def update_map(date_range: list[str | None], sites: list[str], hour_range: list[
         df_trap,
         lat="lat",
         lon="lon",
-        custom_data=["name", "total_videos", "total_tracks", "total_species"],
+        custom_data=["name", "total_videos", "total_tracks"],
     )
     fig.update_traces(
         marker=dict(size=13, color="#E07A5F", opacity=1.0),
         hovertemplate=(
             "<b>Site</b>: %{customdata[0]}<br><br>"
-            "<b>Total videos</b>: %{customdata[1]}<br>"
-            "<b>Tracked individuals</b>: %{customdata[2]}<br>"
-            "<b>Detected species</b>: %{customdata[3]}"
+            "<b>N° of videos</b>: %{customdata[1]}<br>"
+            "<b>N° of tracks</b>: %{customdata[2]}"
             "<extra></extra>"
         ),
     )
@@ -350,7 +349,9 @@ def update_status_chart(date_range: list[str | None], sites: list[str], hour_ran
         names="status",
         values="total",
         hole=0.5,
-        color_discrete_sequence=pio.templates[pio.templates.default].layout.colorway[1:],
+        color="status",
+        color_discrete_map=STATUS_COLOR_MAP,
+        category_orders={"status": ["COMPLETED", "PROCESSING", "PENDING", "FAILED"]},
     )
     fig.update_traces(
         textinfo="percent+value",
@@ -435,8 +436,8 @@ def update_computational_timing(date_range: list[str | None], sites: list[str], 
     Input("site-filter", "value"),
     Input("hour-range-slider", "value"),
 )
-def update_species_histogram(date_range: list[str | None], sites: list[str], hour_range: list[int]):
-    """Display horizontal bar chart of detected species"""
+def update_tracks_histogram(date_range: list[str | None], sites: list[str], hour_range: list[int]):
+    """Display histogram of tracks per video"""
 
     if not date_range[0] or not date_range[1]:
         raise PreventUpdate
@@ -449,21 +450,23 @@ def update_species_histogram(date_range: list[str | None], sites: list[str], hou
         "start_hour": hour_range[0],
         "end_hour": hour_range[1],
     }
-    df_species = db.run_sql_file("home/get_species.sql", parameters=params)
-    df_species = df_species.groupby("species", as_index=False).agg(total=("total", "sum"))
+    df_tracks = db.run_sql_file("home/get_tracks.sql", parameters=params)
 
     # Create figure.
-    fig = px.bar(
-        df_species,
+    fig = px.histogram(
+        df_tracks,
         x="total",
-        y="species",
-        orientation="h",
+        text_auto=True,
+        opacity=0.8,
     )
-    fig.update_traces(hovertemplate="<b>N° of tracks</b>: %{x}<br>" "<b>Species</b>: %{y}<br>" "<extra></extra>")
+    fig.update_traces(
+        hovertemplate="<b>N° of videos</b>: %{y}<br><b>N° of tracks</b>: %{x}<br><extra></extra>",
+        xbins=dict(size=1),
+    )
     fig.update_layout(
-        legend=dict(title_text=""),
-        xaxis=dict(title="Number of tracks"),
-        yaxis=dict(title="Species"),
+        bargap=0.2,
+        xaxis=dict(title="Number of tracks", dtick=1),
+        yaxis=dict(title="Number of videos", dtick=1),
         margin=dict(l=20, r=20, t=20, b=20),
         autosize=True,
     )
@@ -491,13 +494,13 @@ def update_daily_sightings(date_range: list[str | None], sites: list[str], hour_
         "start_hour": hour_range[0],
         "end_hour": hour_range[1],
     }
-    df_daily = db.run_sql_file("home/get_tracked_individuals.sql", parameters=params)
+    df_daily = db.run_sql_file("home/get_tracks.sql", parameters=params)
     df_filtered = (
-        df_daily.set_index("created_at")
-        .reindex(pd.date_range(start=date_range[0], end=date_range[1], freq="D"))
+        df_daily.groupby("created_at")["total"]
+        .sum()
+        .reindex(pd.date_range(start=date_range[0], end=date_range[1], freq="D"), fill_value=0)
         .rename_axis("created_at")
         .reset_index()
-        .fillna(0)
     )
 
     # Create figure.
@@ -549,7 +552,7 @@ def update_hourly_flow(date_range: list[str | None], sites: list[str], hour_rang
         "start_hour": hour_range[0],
         "end_hour": hour_range[1],
     }
-    df_hourly = db.run_sql_file("home/get_tracked_individuals_hourly.sql", parameters=params)
+    df_hourly = db.run_sql_file("home/get_tracks_hourly.sql", parameters=params)
     df_filtered = (
         df_hourly.set_index("created_at")
         .reindex(pd.date_range(start=f"{date_range[0]} 00:00:00", end=f"{date_range[1]} 23:00:00", freq="h"))
@@ -567,7 +570,7 @@ def update_hourly_flow(date_range: list[str | None], sites: list[str], hour_rang
     # Create figure.
     fig = px.imshow(df_pivot, aspect="auto", color_continuous_scale=CONTINUOUS_SCALE)
     fig.update_traces(
-        hovertemplate="<b>N° of tracks</b>: %{z}<br><br>"
+        hovertemplate="<b>N° of tracks</b>: %{z}<br>"
         "<b>Datetime</b>: %{x}<br>"
         "<b>Hour</b>: %{y}<br>"
         "<extra></extra>"

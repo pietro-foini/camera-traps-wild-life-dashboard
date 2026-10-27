@@ -327,7 +327,7 @@ def save_validation(
             "label": row["label"],
             "comments": row.get("comments"),
             "is_modified": (row.get("tracker_id") is None) or (row["label"] != row.get("original_label")),
-            "validated_by": user_data.get("nickname", "Guest"),
+            "validated_by": user_data.get("name", "Guest"),
         }
         for row in validation_rows
     ]
