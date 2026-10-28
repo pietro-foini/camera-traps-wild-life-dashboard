@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 import dash_mantine_components as dmc
 import plotly.io as pio
-from dash import Dash, Input, Output, State, callback, dcc, page_container, page_registry
+from dash import Dash, Input, Output, State, callback, ctx, dcc, no_update, page_container, page_registry
 from dash_iconify import DashIconify
 from flask import session
 
@@ -233,13 +233,45 @@ app.layout = dmc.MantineProvider(
                                                     children=[
                                                         dmc.Group(
                                                             justify="space-between",
+                                                            align="center",
                                                             children=[
                                                                 dmc.Text("Time Range", size="sm", fw=500),
-                                                                dmc.Badge(
-                                                                    id="hour-range-label",
-                                                                    children="00:00 - 24:00",
-                                                                    color="palette",
-                                                                    size="sm",
+                                                                dmc.Group(
+                                                                    gap=6,
+                                                                    children=[
+                                                                        dmc.SegmentedControl(
+                                                                            id="day-night-preset",
+                                                                            value="all",
+                                                                            size="xs",
+                                                                            radius="xl",
+                                                                            color="palette",
+                                                                            data=[
+                                                                                {"value": "all", "label": "All"},
+                                                                                {
+                                                                                    "value": "day",
+                                                                                    "label": dmc.Center(
+                                                                                        DashIconify(
+                                                                                            icon="lucide:sun", width=14
+                                                                                        )
+                                                                                    ),
+                                                                                },
+                                                                                {
+                                                                                    "value": "night",
+                                                                                    "label": dmc.Center(
+                                                                                        DashIconify(
+                                                                                            icon="lucide:moon", width=14
+                                                                                        )
+                                                                                    ),
+                                                                                },
+                                                                            ],
+                                                                        ),
+                                                                        dmc.Badge(
+                                                                            id="hour-range-label",
+                                                                            children="00:00 – 24:00",
+                                                                            color="palette",
+                                                                            size="sm",
+                                                                        ),
+                                                                    ],
                                                                 ),
                                                             ],
                                                         ),
@@ -342,13 +374,28 @@ def update_header_user(user_data: dict[str, str]):
 
 
 @callback(
+    Output("hour-range-slider", "value", allow_duplicate=True),
+    Output("hour-range-slider", "disabled"),
     Output("hour-range-label", "children"),
+    Output("day-night-preset", "value", allow_duplicate=True),
+    Input("day-night-preset", "value"),
     Input("hour-range-slider", "value"),
+    prevent_initial_call=True,
 )
-def update_hour_badge(hours: list[int]):
-    """Update the hour range label"""
+def sync_time_controls(preset: str, hours: list[int]):
+    """Sync Day/Night preset and hour RangeSlider"""
 
-    return f"{hours[0]:02d}:00 – {hours[1]:02d}:00"
+    if ctx.triggered_id == "day-night-preset":
+        if preset == "day":
+            return [6, 20], False, "06:00 – 20:00", no_update
+        if preset == "night":
+            return [0, 24], True, "20:00 – 06:00", no_update
+        if preset == "all":
+            return [0, 24], False, "00:00 – 24:00", no_update
+
+    new_preset = "all" if hours == [0, 24] else ("day" if hours == [6, 20] else "")
+
+    return no_update, False, f"{hours[0]:02d}:00 – {hours[1]:02d}:00", new_preset
 
 
 @callback(
@@ -356,10 +403,11 @@ def update_hour_badge(hours: list[int]):
     Output("site-filter", "value"),
     Output("class-filter", "value"),
     Output("hour-range-slider", "value"),
+    Output("day-night-preset", "value"),
     Input("reset-filters-btn", "n_clicks"),
     prevent_initial_call=True,
 )
 def reset_filters(n_clicks: int):
     """Reset filters to default values"""
 
-    return [datetime.now().date() - timedelta(days=30), datetime.now().date()], [], [], [0, 24]
+    return [datetime.now().date() - timedelta(days=30), datetime.now().date()], [], [], [0, 24], "all"
