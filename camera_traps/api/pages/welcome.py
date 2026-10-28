@@ -1,6 +1,6 @@
 import dash
 import dash_mantine_components as dmc
-from dash import Input, Output, callback, html
+from dash import ALL, Input, Output, callback, ctx, html
 
 dash.register_page(__name__, path="/", name="Welcome")
 
@@ -62,7 +62,6 @@ data = [
 
 def make_card(image: str, category: str):
     """Create a card with the given image and category"""
-
     return dmc.Paper(
         children=[
             html.Div(
@@ -70,7 +69,13 @@ def make_card(image: str, category: str):
                     dmc.Text(category.upper(), c="white", opacity=0.9, fw=700),
                 ]
             ),
-            dmc.Button(children="Explore", variant="white", color="dark"),
+            dmc.Button(
+                id={"type": "explore-btn", "category": category},
+                children="Explore",
+                variant="white",
+                color="dark",
+                opacity=0.9,
+            ),
         ],
         shadow="md",
         p="xl",
@@ -136,6 +141,7 @@ layout = dmc.Box(
                             id="carousel-cards",
                             w=500,
                             emblaOptions={"loop": True, "align": "start"},
+                            autoplay=True,
                         ),
                     ),
                 ],
@@ -163,3 +169,20 @@ def render_welcome_message(user: dict | None):
             gradient={"from": "palette.5", "to": "palette.8", "deg": 45},
         ),
     ]
+
+
+@callback(
+    Output("class-filter", "value", allow_duplicate=True),
+    Output("_pages_location", "pathname"),
+    Input({"type": "explore-btn", "category": ALL}, "n_clicks"),
+    prevent_initial_call=True,
+)
+def explore_species(n_clicks):
+    """Set class filter and navigate to /analytics"""
+
+    if not any(n_clicks):
+        return dash.no_update, dash.no_update
+
+    selected_category = ctx.triggered_id["category"]
+
+    return [selected_category], "/analytics"

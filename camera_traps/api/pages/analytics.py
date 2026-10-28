@@ -1,16 +1,18 @@
+from pathlib import Path
+
 import dash
 import dash_mantine_components as dmc
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from dash import Input, Output, callback, dcc
+from dash import Input, Output, callback, dcc, html
 from dash.exceptions import PreventUpdate
 from plotly.subplots import make_subplots
 
 from camera_traps.api.components import create_card, create_title
 from camera_traps.api.config import CONTINUOUS_SCALE, EDIT_COLOR_MAP, GRAPH_CONFIG
-from camera_traps.data import Classes
 from camera_traps.db.config import db
+from camera_traps.settings import S
 
 dash.register_page(__name__, path="/analytics", title="Analytics", order=1)
 
@@ -21,7 +23,7 @@ layout = dmc.Container(
         dmc.Tabs(
             value="predictions",
             variant="default",
-            color="palette",
+            color="palette.8",
             radius=0,
             children=[
                 dmc.TabsList(
@@ -53,47 +55,54 @@ layout = dmc.Container(
                                                         spacing="md",
                                                         children=[
                                                             create_card(
-                                                                id="kpi-processed-videos",
-                                                                title="Processed videos",
-                                                                info="Number of total processed videos by the model.",
+                                                                id="kpi-predicted-videos",
+                                                                title="Predicted videos",
+                                                                info="Total number of successfully processed videos in which at least one of the selected classes was predicted by the model.",
                                                             ),
                                                             create_card(
                                                                 id="kpi-predicted-tracks",
                                                                 title="Predicted tracks",
-                                                                info="Number of total predicted tracks contained into the processed videos.",
+                                                                info="Total number of predicted tracks for the selected classes in the successfully processed videos.",
                                                             ),
                                                             create_card(
                                                                 id="kpi-average-confidence",
                                                                 title="Avg Confidence",
-                                                                info="Average confidence score of the recognition model across all the predictions.",
+                                                                info="Average model confidence score across all frame-level predictions for the selected classes of the successfully processed videos.",
                                                             ),
                                                             create_card(
                                                                 id="kpi-predicted-classes",
                                                                 title="Predicted classes",
-                                                                info="Number of predicted classes.",
+                                                                info="Total number of predicted classes across the the successfully processed videos.",
                                                             ),
                                                         ],
                                                     ),
                                                     dmc.Paper(
                                                         withBorder=True,
                                                         radius="md",
-                                                        p="md",
+                                                        p="xs",
                                                         style={"height": "40vh"},
-                                                        children=dmc.Stack(
-                                                            gap="xs",
+                                                        children=dcc.Loading(
+                                                            color="var(--primary)",
+                                                            type="circle",
                                                             children=[
-                                                                create_title(
-                                                                    title="Track length by class",
-                                                                    info="Displays the distribution of track lengths (in frames) for each predicted class, showing how long each animal typically remains visible in the videos.",
+                                                                dmc.Text(
+                                                                    children=[
+                                                                        "Example · ",
+                                                                        html.Span(
+                                                                            id="video-example-value",
+                                                                            children="0",
+                                                                            style={"fontWeight": 500},
+                                                                        ),
+                                                                    ],
+                                                                    size="xs",
+                                                                    c="dimmed",
+                                                                    fw=300,
+                                                                    tt="uppercase",
+                                                                    mb="xs",
                                                                 ),
-                                                                dcc.Loading(
-                                                                    color="var(--primary)",
-                                                                    type="circle",
-                                                                    children=dcc.Graph(
-                                                                        id="species-track-length-graph",
-                                                                        config=GRAPH_CONFIG,
-                                                                        style={"height": "32vh", "width": "100%"},
-                                                                    ),
+                                                                html.Div(
+                                                                    id="video-example-container",
+                                                                    style={"height": "34vh", "width": "100%"},
                                                                 ),
                                                             ],
                                                         ),
@@ -113,7 +122,7 @@ layout = dmc.Container(
                                                     children=[
                                                         create_title(
                                                             title="Predicted classes",
-                                                            info="Breakdown of number of predicted tracks for each identified classes.",
+                                                            info="Breakdown of predicted tracks per identified class and their track-level confidence distribution.",
                                                         ),
                                                         dcc.Loading(
                                                             color="var(--primary)",
@@ -359,7 +368,7 @@ layout = dmc.Container(
 
 
 @callback(
-    Output("kpi-processed-videos", "children"),
+    Output("kpi-predicted-videos", "children"),
     Output("kpi-predicted-tracks", "children"),
     Output("kpi-average-confidence", "children"),
     Output("kpi-predicted-classes", "children"),
@@ -429,19 +438,15 @@ def update_validation_kpi(date_range: list[str | None], sites: list[str], classe
 
 
 @callback(
-    Output("species-track-length-graph", "figure"),
+    Output("video-example-container", "children"),
+    Output("video-example-value", "children"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
     Input("class-filter", "value"),
     Input("hour-range-slider", "value"),
 )
-def update_track_length_by_species(
-    date_range: list[str | None], sites: list[str], classes: list[str], hour_range: list[int]
-):
-    """Display horizontal box plot of track length (frames) by species"""
-
-    if not date_range[0] or not date_range[1]:
-        raise PreventUpdate
+def display_video_example(date_range: list[str | None], sites: list[str], classes: list[str], hour_range: list[int]):
+    """Load the selected video"""
 
     # Retrieve data.
     params = {
@@ -452,34 +457,26 @@ def update_track_length_by_species(
         "end_hour": hour_range[1],
         "species": classes if classes else None,
     }
-    df_lengths = db.run_sql_file("analytics/predictions/get_track_lengths.sql", parameters=params)
-    df_lengths["species"] = df_lengths["species"].str.capitalize()
+    df_video = db.run_sql_file("analytics/predictions/get_example.sql", parameters=params)
 
-    # Create figure.
-    fig = px.box(
-        df_lengths,
-        x="track_length",
-        y="species",
-        color="species",
-        orientation="h",
-        points="outliers",
-        color_discrete_sequence=["#2E6F40"],
-    )
-    fig.update_traces(
-        opacity=0.75,
-        name="",
-    )
-    fig.update_layout(
-        showlegend=False,
-        hovermode="y unified",
-        hoverlabel=dict(bgcolor="rgba(255, 255, 255, 0.9)"),
-        xaxis=dict(title="Track length (frames)", hoverformat=".0f"),
-        yaxis=dict(title="Classes"),
-        margin=dict(l=20, r=20, t=10, b=20),
-        autosize=True,
-    )
+    if df_video.empty:
+        return html.Video(), ""
 
-    return fig
+    return (
+        html.Video(
+            src=f"{S.S3_ENDPOINT_URL}/buckets/bucket-cameratraps/output/{Path(df_video.iloc[0]['filename']).name}",
+            controls=True,
+            autoPlay=True,
+            style={
+                "width": "100%",
+                "height": "100%",
+                "borderRadius": "8px",
+                "objectFit": "contain",
+                "backgroundColor": "black",
+            },
+        ),
+        Path(df_video.iloc[0]["filename"]).name,
+    )
 
 
 @callback(
@@ -603,7 +600,7 @@ def update_predictions_by_species(
     fig.update_layout(
         showlegend=False,
         hovermode="y unified",
-        hoverlabel=dict(bgcolor="rgba(255, 255, 255, 0.9)"),
+        # hoverlabel=dict(bgcolor="rgba(255, 255, 255, 0.9)"),
         xaxis=dict(
             title="Number of tracks",
             zeroline=False,

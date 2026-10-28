@@ -232,7 +232,6 @@ app.layout = dmc.MantineProvider(
                                                                 dmc.Badge(
                                                                     id="hour-range-label",
                                                                     children="00:00 - 24:00",
-                                                                    variant="light",
                                                                     color="palette",
                                                                     size="sm",
                                                                 ),

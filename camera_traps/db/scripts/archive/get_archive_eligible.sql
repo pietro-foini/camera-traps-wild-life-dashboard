@@ -18,6 +18,7 @@ LEFT JOIN (
 ) AS vo
     ON vi.id = vo.video_input_id
 WHERE TRUE
+    AND vi.status = 'COMPLETED'
     AND CAST(vi.created_at AS DATE) BETWEEN :start_date AND :end_date
     AND EXTRACT(HOUR FROM vi.created_at) >= :start_hour
     AND EXTRACT(HOUR FROM vi.created_at) < :end_hour
