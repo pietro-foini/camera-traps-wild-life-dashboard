@@ -33,5 +33,8 @@ class Settings(BaseSettings):
     S3_ENDPOINT_URL: str
     """endpoint url"""
 
+    MAPBOX_TOKEN: str
+    """token for mapbox"""
+
 
 S = Settings()  # type: ignore

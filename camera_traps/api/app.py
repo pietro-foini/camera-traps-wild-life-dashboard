@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 
 import dash_mantine_components as dmc
+import plotly.io as pio
 from dash import Dash, Input, Output, State, callback, dcc, page_container, page_registry
 from dash_iconify import DashIconify
 from flask import session
@@ -8,6 +9,17 @@ from flask import session
 from camera_traps.api.server import server
 from camera_traps.data import Classes
 from camera_traps.settings import SITES
+
+dmc.add_figure_templates(default="mantine_light")
+
+for template_name in ["mantine_light", "mantine_dark"]:
+    pio.templates[template_name].layout.update(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis=dict(gridcolor="rgba(0,0,0,0)"),
+        yaxis=dict(gridcolor="rgba(200, 200, 200, 0.2)"),
+        colorway=["#2E6F40", "#E07A5F", "#3D5A80", "#F2CC8F", "#81559B"],
+    )
 
 app = Dash(
     __name__,
@@ -39,12 +51,6 @@ app.layout = dmc.MantineProvider(
         },
         "primaryColor": "palette",
         "defaultRadius": "md",
-        "fontFamily": "'Avenir Next', Avenir, system-ui, -apple-system, 'Segoe UI', sans-serif",
-        "fontFamilyMonospace": "ui-monospace, 'Cascadia Code', Menlo, Monaco, monospace",
-        "headings": {
-            "fontFamily": "'Avenir Next', Avenir, system-ui, -apple-system, 'Segoe UI', sans-serif",
-            "fontWeight": "600",
-        },
     },
     children=[
         dcc.Store(id="session-user-store", storage_type="session"),

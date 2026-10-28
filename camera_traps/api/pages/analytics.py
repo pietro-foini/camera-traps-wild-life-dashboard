@@ -154,7 +154,7 @@ layout = dmc.Container(
                                                     children=[
                                                         create_title(
                                                             title="Predicted tracks per video",
-                                                            info=".",
+                                                            info="Distribution of predicted tracks per video.",
                                                         ),
                                                         dcc.Loading(
                                                             color="var(--primary)",
@@ -181,7 +181,7 @@ layout = dmc.Container(
                                                     children=[
                                                         create_title(
                                                             title="Predicted hourly tracks",
-                                                            info="Hourly distribution of predicted tracks.",
+                                                            info="Concentration of predicted tracks across different hours of the day.",
                                                         ),
                                                         dcc.Loading(
                                                             color="var(--primary)",
@@ -223,22 +223,22 @@ layout = dmc.Container(
                                                             create_card(
                                                                 id="kpi-validated-videos",
                                                                 title="Validated videos",
-                                                                info="Number of total validated videos by users.",
+                                                                info="Total number of successfully validated videos by users in which at least one of the selected classes was validated.",
                                                             ),
                                                             create_card(
                                                                 id="kpi-validated-tracks",
                                                                 title="Validated tracks",
-                                                                info="Number of total validated tracks contained into the validated videos.",
+                                                                info="Total number of tracks belonging to the selected classes that were successfully validated by users within the validated videos.",
                                                             ),
                                                             create_card(
                                                                 id="kpi-model-accuracy",
                                                                 title="Model accuracy",
-                                                                info="Accuracy of the recognition model keeping detected tracks as base.",
+                                                                info="Overall accuracy of the model for the selected classes, calculated using the total number of detected tracks as a baseline.",
                                                             ),
                                                             create_card(
                                                                 id="kpi-human-corrections",
                                                                 title="Human edits",
-                                                                info="Number of total human corrections on recognized specie into detected tracks.",
+                                                                info="Total number of manual corrections made by users to the predicted species within the detected tracks for the selected classes.",
                                                             ),
                                                         ],
                                                     ),
@@ -340,7 +340,7 @@ layout = dmc.Container(
                                                     children=[
                                                         create_title(
                                                             title="Validated hourly tracks",
-                                                            info="Hourly distribution of validated tracks.",
+                                                            info="Concentration of validated tracks across different hours of the day.",
                                                         ),
                                                         dcc.Loading(
                                                             color="var(--primary)",
@@ -481,13 +481,14 @@ def display_video_example(date_range: list[str | None], sites: list[str], classe
 
 @callback(
     Output("validation-outcome-chart", "figure"),
+    Input("theme-radio", "value"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
     Input("class-filter", "value"),
     Input("hour-range-slider", "value"),
 )
 def update_validation_outcome(
-    date_range: list[str | None], sites: list[str], classes: list[str], hour_range: list[int]
+    theme: str, date_range: list[str | None], sites: list[str], classes: list[str], hour_range: list[int]
 ):
     """Display donut chart of confirmed vs modified vs manual additions"""
 
@@ -524,6 +525,7 @@ def update_validation_outcome(
         "<extra></extra>",
     )
     fig.update_layout(
+        template="mantine_dark" if theme == "dark" else "mantine_light",
         margin=dict(l=10, r=10, t=15, b=15),
         legend=dict(orientation="v", yanchor="middle", y=0.5, xanchor="right", x=0, title_text=""),
         autosize=True,
@@ -534,13 +536,14 @@ def update_validation_outcome(
 
 @callback(
     Output("predicted-species-histogram", "figure"),
+    Input("theme-radio", "value"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
     Input("class-filter", "value"),
     Input("hour-range-slider", "value"),
 )
 def update_predictions_by_species(
-    date_range: list[str | None], sites: list[str], classes: list[str], hour_range: list[int]
+    theme: str, date_range: list[str | None], sites: list[str], classes: list[str], hour_range: list[int]
 ):
     """Display horizontal bar chart of predicted species and box plot of confidence"""
 
@@ -567,7 +570,7 @@ def update_predictions_by_species(
         cols=2,
         shared_yaxes=True,
         horizontal_spacing=0.04,
-        column_widths=[0.55, 0.45],
+        column_widths=[0.5, 0.5],
     )
     fig.add_trace(
         go.Bar(
@@ -590,7 +593,7 @@ def update_predictions_by_species(
             y=df_confidence["species"],
             orientation="h",
             boxpoints="outliers",
-            opacity=0.75,
+            opacity=0.9,
             marker=dict(color="#E07A5F"),
             name="",
         ),
@@ -598,9 +601,14 @@ def update_predictions_by_species(
         col=2,
     )
     fig.update_layout(
+        template="mantine_dark" if theme == "dark" else "mantine_light",
+        hoverlabel=dict(
+            bgcolor="rgba(37, 38, 43, 0.95)" if theme == "dark" else "rgba(255, 255, 255, 0.95)",
+            bordercolor="#373A40" if theme == "dark" else "#dee2e6",
+            font=dict(color="#C1C2C5" if theme == "dark" else "#212529"),
+        ),
         showlegend=False,
         hovermode="y unified",
-        # hoverlabel=dict(bgcolor="rgba(255, 255, 255, 0.9)"),
         xaxis=dict(
             title="Number of tracks",
             zeroline=False,
@@ -630,13 +638,14 @@ def update_predictions_by_species(
 
 @callback(
     Output("validated-species-bar", "figure"),
+    Input("theme-radio", "value"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
     Input("class-filter", "value"),
     Input("hour-range-slider", "value"),
 )
 def update_validation_outcome_by_species(
-    date_range: list[str | None], sites: list[str], classes: list[str], hour_range: list[int]
+    theme: str, date_range: list[str | None], sites: list[str], classes: list[str], hour_range: list[int]
 ):
     """Display horizontal stacked bar chart of confirmed vs modified per species"""
 
@@ -665,14 +674,15 @@ def update_validation_outcome_by_species(
         orientation="h",
         barmode="stack",
         color_discrete_map=EDIT_COLOR_MAP,
-        category_orders={"status": ["Confirmed", "Relabeled", "Added"]},
+        category_orders={"validation_status": ["Confirmed", "Relabeled", "Added"]},
     )
     fig.update_traces(
         hovertemplate="<b>Class</b>: %{y}<br><b>N° of tracks</b>: %{x}<extra></extra>",
     )
     fig.update_layout(
+        template="mantine_dark" if theme == "dark" else "mantine_light",
         xaxis=dict(title="Number of tracks"),
-        yaxis=dict(title="Classes"),
+        yaxis=dict(title="Classes", categoryorder="total ascending"),
         legend=dict(title_text=""),
         margin=dict(l=20, r=20, t=20, b=20),
         autosize=True,
@@ -683,12 +693,15 @@ def update_validation_outcome_by_species(
 
 @callback(
     Output("predicted-tracks-histogram", "figure"),
+    Input("theme-radio", "value"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
     Input("class-filter", "value"),
     Input("hour-range-slider", "value"),
 )
-def update_tracks_histogram(date_range: list[str | None], sites: list[str], classes: list[str], hour_range: list[int]):
+def update_tracks_histogram(
+    theme: str, date_range: list[str | None], sites: list[str], classes: list[str], hour_range: list[int]
+):
     """Display histogram of tracks per video"""
 
     if not date_range[0] or not date_range[1]:
@@ -718,6 +731,7 @@ def update_tracks_histogram(date_range: list[str | None], sites: list[str], clas
         xbins=dict(size=1),
     )
     fig.update_layout(
+        template="mantine_dark" if theme == "dark" else "mantine_light",
         bargap=0.2,
         xaxis=dict(title="Number of tracks", dtick=1),
         yaxis=dict(title="Number of videos", dtick=1),
@@ -730,12 +744,15 @@ def update_tracks_histogram(date_range: list[str | None], sites: list[str], clas
 
 @callback(
     Output("confusion-matrix-chart", "figure"),
+    Input("theme-radio", "value"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
     Input("class-filter", "value"),
     Input("hour-range-slider", "value"),
 )
-def update_confusion_matrix(date_range: list[str | None], sites: list[str], classes: list[str], hour_range: list[int]):
+def update_confusion_matrix(
+    theme: str, date_range: list[str | None], sites: list[str], classes: list[str], hour_range: list[int]
+):
     """Display confusion matrix between predicted label and validated label"""
 
     if not date_range[0] or not date_range[1]:
@@ -766,12 +783,14 @@ def update_confusion_matrix(date_range: list[str | None], sites: list[str], clas
         color_continuous_scale=CONTINUOUS_SCALE,
     )
     fig.update_traces(
+        textfont=dict(color="white" if theme == "dark" else "black"),
         hovertemplate="<b>Predicted</b>: %{x}<br>"
         "<b>Validated</b>: %{y}<br>"
         "<b>N° of tracks</b>: %{z}<br>"
-        "<extra></extra>"
+        "<extra></extra>",
     )
     fig.update_layout(
+        template="mantine_dark" if theme == "dark" else "mantine_light",
         xaxis=dict(title="Predicted classes", showgrid=False, zeroline=False),
         yaxis=dict(title="Validated classes", showgrid=False, zeroline=False),
         margin=dict(l=20, r=20, t=20, b=20),
@@ -780,7 +799,7 @@ def update_confusion_matrix(date_range: list[str | None], sites: list[str], clas
         coloraxis_colorbar_title_side="right",
         hoverlabel=dict(
             bgcolor="#2E6F40",
-            bordercolor="#2E6F40",
+            font=dict(color="white"),
         ),
     )
 
@@ -789,13 +808,14 @@ def update_confusion_matrix(date_range: list[str | None], sites: list[str], clas
 
 @callback(
     Output("predicted-hourly-heatmap", "figure"),
+    Input("theme-radio", "value"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
     Input("hour-range-slider", "value"),
     Input("class-filter", "value"),
 )
 def update_predicted_hourly_heatmap(
-    date_range: list[str | None], sites: list[str], hour_range: list[int], classes: list[str]
+    theme: str, date_range: list[str | None], sites: list[str], hour_range: list[int], classes: list[str]
 ):
     """Display hourly heatmap of predicted tracks"""
 
@@ -841,6 +861,7 @@ def update_predicted_hourly_heatmap(
         "<extra></extra>"
     )
     fig.update_layout(
+        template="mantine_dark" if theme == "dark" else "mantine_light",
         xaxis=dict(title="Datetime", showgrid=False, zeroline=False),
         yaxis=dict(title="Hour", showgrid=False, zeroline=False),
         margin=dict(l=20, r=20, t=20, b=20),
@@ -849,7 +870,7 @@ def update_predicted_hourly_heatmap(
         coloraxis_colorbar_title_side="right",
         hoverlabel=dict(
             bgcolor="#2E6F40",
-            bordercolor="#2E6F40",
+            font=dict(color="white"),
         ),
     )
 
@@ -858,13 +879,14 @@ def update_predicted_hourly_heatmap(
 
 @callback(
     Output("validated-hourly-heatmap", "figure"),
+    Input("theme-radio", "value"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
     Input("class-filter", "value"),
     Input("hour-range-slider", "value"),
 )
 def update_validated_hourly_heatmap(
-    date_range: list[str | None], sites: list[str], classes: list[str], hour_range: list[int]
+    theme: str, date_range: list[str | None], sites: list[str], classes: list[str], hour_range: list[int]
 ):
     """Display hourly heatmap of validated tracks"""
 
@@ -910,6 +932,7 @@ def update_validated_hourly_heatmap(
         "<extra></extra>"
     )
     fig.update_layout(
+        template="mantine_dark" if theme == "dark" else "mantine_light",
         xaxis=dict(title="Datetime", showgrid=False, zeroline=False),
         yaxis=dict(title="Hour", showgrid=False, zeroline=False),
         margin=dict(l=20, r=20, t=20, b=20),
@@ -918,7 +941,7 @@ def update_validated_hourly_heatmap(
         coloraxis_colorbar_title_side="right",
         hoverlabel=dict(
             bgcolor="#2E6F40",
-            bordercolor="#2E6F40",
+            font=dict(color="white"),
         ),
     )
 

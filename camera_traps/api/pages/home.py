@@ -11,7 +11,7 @@ from camera_traps.api.components import create_card, create_title
 from camera_traps.api.config import CONTINUOUS_SCALE, GRAPH_CONFIG, STATUS_COLOR_MAP
 from camera_traps.data import Classes
 from camera_traps.db.config import db
-from camera_traps.settings import SITES
+from camera_traps.settings import SITES, S
 
 dash.register_page(__name__, path="/home", title="Home", order=0)
 
@@ -258,11 +258,12 @@ def update_kpi(date_range: list[str | None], sites: list[str], hour_range: list[
 @callback(
     Output("camera-map", "figure"),
     Output("camera-map-value", "children"),
+    Input("theme-radio", "value"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
     Input("hour-range-slider", "value"),
 )
-def update_map(date_range: list[str | None], sites: list[str], hour_range: list[int]):
+def update_map(theme: str, date_range: list[str | None], sites: list[str], hour_range: list[int]):
     """Display camera trap locations on the map"""
 
     if not date_range[0] or not date_range[1]:
@@ -304,11 +305,13 @@ def update_map(date_range: list[str | None], sites: list[str], hour_range: list[
         )
     )
     fig.update_layout(
+        template="mantine_dark" if theme == "dark" else "mantine_light",
         margin=dict(l=0, r=0, t=0, b=0),
         hovermode="closest",
         mapbox=dict(
+            accesstoken=S.MAPBOX_TOKEN,
             center=go.layout.mapbox.Center(lat=44.6337, lon=9.7314),
-            style="open-street-map",
+            style="dark" if theme == "dark" else "light",
             zoom=12,
         ),
         paper_bgcolor="rgba(0,0,0,0)",
@@ -320,11 +323,12 @@ def update_map(date_range: list[str | None], sites: list[str], hour_range: list[
 
 @callback(
     Output("status-chart", "figure"),
+    Input("theme-radio", "value"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
     Input("hour-range-slider", "value"),
 )
-def update_status_chart(date_range: list[str | None], sites: list[str], hour_range: list[int]):
+def update_status_chart(theme: str, date_range: list[str | None], sites: list[str], hour_range: list[int]):
     """Display donut chart of video processing status"""
 
     if not date_range[0] or not date_range[1]:
@@ -358,6 +362,7 @@ def update_status_chart(date_range: list[str | None], sites: list[str], hour_ran
         "<extra></extra>",
     )
     fig.update_layout(
+        template="mantine_dark" if theme == "dark" else "mantine_light",
         margin=dict(l=10, r=10, t=15, b=15),
         legend=dict(
             orientation="v",
@@ -375,11 +380,12 @@ def update_status_chart(date_range: list[str | None], sites: list[str], hour_ran
 
 @callback(
     Output("computational-timing", "figure"),
+    Input("theme-radio", "value"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
     Input("hour-range-slider", "value"),
 )
-def update_computational_timing(date_range: list[str | None], sites: list[str], hour_range: list[int]):
+def update_computational_timing(theme: str, date_range: list[str | None], sites: list[str], hour_range: list[int]):
     """Display horizontal box plot of queue and processing times"""
 
     if not date_range[0] or not date_range[1]:
@@ -415,6 +421,7 @@ def update_computational_timing(date_range: list[str | None], sites: list[str], 
         name="",
     )
     fig.update_layout(
+        template="mantine_dark" if theme == "dark" else "mantine_light",
         showlegend=False,
         hovermode="y unified",
         hoverlabel=dict(bgcolor="rgba(255, 255, 255, 0.9)"),
@@ -429,11 +436,12 @@ def update_computational_timing(date_range: list[str | None], sites: list[str], 
 
 @callback(
     Output("species-histogram", "figure"),
+    Input("theme-radio", "value"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
     Input("hour-range-slider", "value"),
 )
-def update_duration_histogram(date_range: list[str | None], sites: list[str], hour_range: list[int]):
+def update_duration_histogram(theme: str, date_range: list[str | None], sites: list[str], hour_range: list[int]):
     """Display histogram of video duration"""
 
     if not date_range[0] or not date_range[1]:
@@ -460,6 +468,7 @@ def update_duration_histogram(date_range: list[str | None], sites: list[str], ho
         xbins=dict(size=1),
     )
     fig.update_layout(
+        template="mantine_dark" if theme == "dark" else "mantine_light",
         xaxis=dict(title="Duration (s)", dtick=1),
         yaxis=dict(title="Number of videos", dtick=1),
         margin=dict(l=20, r=20, t=20, b=20),
@@ -471,11 +480,12 @@ def update_duration_histogram(date_range: list[str | None], sites: list[str], ho
 
 @callback(
     Output("daily-video-chart", "figure"),
+    Input("theme-radio", "value"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
     Input("hour-range-slider", "value"),
 )
-def update_daily_video(date_range: list[str | None], sites: list[str], hour_range: list[int]):
+def update_daily_video(theme: str, date_range: list[str | None], sites: list[str], hour_range: list[int]):
     """Display area chart of daily detected animals"""
 
     if not date_range[0] or not date_range[1]:
@@ -518,6 +528,7 @@ def update_daily_video(date_range: list[str | None], sites: list[str], hour_rang
         hovertemplate="<b>N° of videos</b>: %{y}<br>" "<b>Datetime</b>: %{x}, %{x|%a}" "<extra></extra>",
     )
     fig.update_layout(
+        template="mantine_dark" if theme == "dark" else "mantine_light",
         showlegend=False,
         xaxis=dict(title="Datetime"),
         yaxis=dict(title="Number of videos"),
@@ -530,11 +541,12 @@ def update_daily_video(date_range: list[str | None], sites: list[str], hour_rang
 
 @callback(
     Output("hourly-video-chart", "figure"),
+    Input("theme-radio", "value"),
     Input("date-range-picker", "value"),
     Input("site-filter", "value"),
     Input("hour-range-slider", "value"),
 )
-def update_hourly_video(date_range: list[str | None], sites: list[str], hour_range: list[int]):
+def update_hourly_video(theme: str, date_range: list[str | None], sites: list[str], hour_range: list[int]):
     """Display hourly heatmap of detected animals"""
 
     if not date_range[0] or not date_range[1]:
@@ -578,6 +590,7 @@ def update_hourly_video(date_range: list[str | None], sites: list[str], hour_ran
         "<extra></extra>"
     )
     fig.update_layout(
+        template="mantine_dark" if theme == "dark" else "mantine_light",
         xaxis=dict(title="Datetime", showgrid=False, zeroline=False),
         yaxis=dict(title="Hour", showgrid=False, zeroline=False),
         margin=dict(l=20, r=20, t=20, b=20),
@@ -586,7 +599,7 @@ def update_hourly_video(date_range: list[str | None], sites: list[str], hour_ran
         coloraxis_colorbar_title_side="right",
         hoverlabel=dict(
             bgcolor="#2E6F40",
-            bordercolor="#2E6F40",
+            font=dict(color="white"),
         ),
     )
 

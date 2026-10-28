@@ -5,11 +5,6 @@
     --primary-hover: #f4faf6;
 }
 
-/* --- PLOTLY --- */
-.js-plotly-plot .plotly text {
-    fill: var(--mantine-color-text, #868e96) !important;
-}
-
 /* --- AG GRID (Light & Base) --- */
 .ag-theme-alpine,
 .ag-theme-quartz,
