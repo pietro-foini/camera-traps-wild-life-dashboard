@@ -9,6 +9,9 @@ SITES = {
 class Settings(BaseSettings):
     """Global Settings"""
 
+    FLASK_SECRET_KEY: str
+    """flask secret key"""
+
     # Authentication.
     AUTH_DOMAIN: str
     """auth0 domain"""

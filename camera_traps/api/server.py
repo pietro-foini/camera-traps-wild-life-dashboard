@@ -10,7 +10,7 @@ server = Flask(__name__)
 
 
 server.config.update(
-    SECRET_KEY="cambia-questa-stringa-con-una-frase-segreta-lunga",
+    SECRET_KEY=S.FLASK_SECRET_KEY,
     PERMANENT_SESSION_LIFETIME=datetime.timedelta(days=7),
 )
 

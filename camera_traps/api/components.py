@@ -79,7 +79,7 @@ def create_card(id: str, title: str, info: str = ""):
     )
 
 
-def create_card_image(image: str, category: str):
+def create_image_card(image: str, category: str):
     """Create a card with the given image and category"""
 
     return dmc.Paper(
@@ -89,14 +89,20 @@ def create_card_image(image: str, category: str):
                     dmc.Text(category.upper(), c="white", opacity=0.9, fw=700),
                 ]
             ),
-            dmc.Button(children="Explore", variant="white", color="dark"),
+            dmc.Button(
+                id={"type": "explore-btn", "category": category},
+                children="Explore",
+                variant="white",
+                color="dark",
+                opacity=0.9,
+            ),
         ],
         shadow="md",
         p="xl",
         radius="md",
         style={
             "backgroundImage": f"url({image})",
-            "height": 440,
+            "height": 540,
             "display": "flex",
             "flexDirection": "column",
             "justifyContent": "space-between",

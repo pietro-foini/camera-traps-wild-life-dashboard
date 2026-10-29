@@ -1,6 +1,8 @@
 import dash
 import dash_mantine_components as dmc
-from dash import ALL, Input, Output, callback, ctx, html
+from dash import ALL, Input, Output, callback, ctx
+
+from camera_traps.api.components import create_image_card
 
 dash.register_page(__name__, path="/", name="Welcome")
 
@@ -60,39 +62,6 @@ data = [
 ]
 
 
-def make_card(image: str, category: str):
-    """Create a card with the given image and category"""
-    return dmc.Paper(
-        children=[
-            html.Div(
-                [
-                    dmc.Text(category.upper(), c="white", opacity=0.9, fw=700),
-                ]
-            ),
-            dmc.Button(
-                id={"type": "explore-btn", "category": category},
-                children="Explore",
-                variant="white",
-                color="dark",
-                opacity=0.9,
-            ),
-        ],
-        shadow="md",
-        p="xl",
-        radius="md",
-        style={
-            "backgroundImage": f"url({image})",
-            "height": 540,
-            "display": "flex",
-            "flexDirection": "column",
-            "justifyContent": "space-between",
-            "alignItems": "flex-start",
-            "backgroundSize": "cover",
-            "backgroundPosition": "center",
-        },
-    )
-
-
 layout = dmc.Box(
     pos="relative",
     mih="calc(100vh - 120px)",
@@ -137,7 +106,7 @@ layout = dmc.Box(
                     dmc.GridCol(
                         span={"base": 12, "md": 5},
                         children=dmc.Carousel(
-                            [dmc.CarouselSlide(make_card(d["image"], d["category"])) for d in data],
+                            [dmc.CarouselSlide(create_image_card(d["image"], d["category"])) for d in data],
                             id="carousel-cards",
                             w=500,
                             emblaOptions={"loop": True, "align": "start"},
