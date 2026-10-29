@@ -164,6 +164,30 @@ layout = dmc.Container(
                                                         ),
                                                     ],
                                                 ),
+                                                dmc.Modal(
+                                                    id="confirm-save-modal",
+                                                    title="Confirm save",
+                                                    centered=True,
+                                                    children=[
+                                                        dmc.Text("Are you sure you want to save the validation?"),
+                                                        dmc.Group(
+                                                            justify="flex-end",
+                                                            mt="md",
+                                                            children=[
+                                                                dmc.Button(
+                                                                    children="Cancel",
+                                                                    id="cancel-save-btn",
+                                                                    variant="subtle",
+                                                                    color="gray",
+                                                                ),
+                                                                dmc.Button(
+                                                                    children="Confirm",
+                                                                    id="confirm-save-btn",
+                                                                ),
+                                                            ],
+                                                        ),
+                                                    ],
+                                                ),
                                             ],
                                         ),
                                     ],
@@ -295,10 +319,33 @@ def remove_manual_row(cell, current_rows):
 
 
 @callback(
+    Output("confirm-save-modal", "opened"),
+    Input("save-validation-btn", "n_clicks"),
+    Input("cancel-save-btn", "n_clicks"),
+    State("confirm-save-modal", "opened"),
+    prevent_initial_call=True,
+)
+def toggle_confirm_modal(open_clicks: bool, cancel_clicks: int, is_open: bool):
+    """Toggle confirm validation modal"""
+
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        raise PreventUpdate
+
+    trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+    if trigger_id == "save-validation-btn":
+        return True
+
+    return False
+
+
+@callback(
     Output("prediction-table", "rowData", allow_duplicate=True),
     Output("validation-table", "rowData", allow_duplicate=True),
-    Input("session-user-store", "data"),
-    Input("save-validation-btn", "n_clicks"),
+    Output("confirm-save-modal", "opened", allow_duplicate=True),
+    Output("save-validation-btn", "disabled", allow_duplicate=True),
+    Input("confirm-save-btn", "n_clicks"),
+    State("session-user-store", "data"),
     State("validation-table", "rowData"),
     State("prediction-table", "selectedRows"),
     State("date-range-picker", "value"),
@@ -307,8 +354,8 @@ def remove_manual_row(cell, current_rows):
     prevent_initial_call=True,
 )
 def save_validation(
-    user_data: dict[str, str],
     n_clicks: int,
+    user_data: dict[str, str],
     validation_rows: list[dict],
     selected_video: list[dict],
     date_range: list[str | None],
@@ -327,11 +374,11 @@ def save_validation(
             "label": row["label"],
             "comments": row.get("comments"),
             "is_modified": (row.get("tracker_id") is None) or (row["label"] != row.get("original_label")),
-            "validated_by": user_data.get("name", "Guest"),
+            "validated_by": (user_data or {}).get("name", "Guest"),
         }
         for row in validation_rows
     ]
 
     db.execute_sql_file("archive/insert_video_validations.sql", parameters=params)
 
-    return update_table(date_range, sites, hour_range), []
+    return update_table(date_range, sites, hour_range), [], False, True
