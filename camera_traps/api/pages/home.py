@@ -422,9 +422,13 @@ def update_computational_timing(theme: str, date_range: list[str | None], sites:
     )
     fig.update_layout(
         template="mantine_dark" if theme == "dark" else "mantine_light",
+        hoverlabel=dict(
+            bgcolor="rgba(37, 38, 43, 0.95)" if theme == "dark" else "rgba(255, 255, 255, 0.95)",
+            bordercolor="#373A40" if theme == "dark" else "#dee2e6",
+            font=dict(color="#C1C2C5" if theme == "dark" else "#212529"),
+        ),
         showlegend=False,
         hovermode="y unified",
-        hoverlabel=dict(bgcolor="rgba(255, 255, 255, 0.9)"),
         xaxis=dict(title="Time (s)", hoverformat=".1f"),
         yaxis=dict(title=""),
         margin=dict(l=20, r=20, t=10, b=20),
