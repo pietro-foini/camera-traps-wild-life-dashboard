@@ -400,4 +400,4 @@ def set_preset_hours(dawn, day, night):
 def reset_filters(n_clicks: int):
     """Reset filters to default values"""
 
-    return [datetime.now().date() - timedelta(days=30), datetime.now().date()], [], [], [0, 24]
+    return [datetime.now().date() - timedelta(days=7), datetime.now().date()], [], [], [0, 24]

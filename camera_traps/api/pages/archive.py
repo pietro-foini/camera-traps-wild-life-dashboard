@@ -236,8 +236,13 @@ def display_video(selected_rows: list[dict]):
     if not selected_rows:
         return dmc.Center(children="Select a record to visualize video", h="100%", c="dimmed")
 
+    if selected_rows[0]["labels"]:
+        src = f"{S.S3_ENDPOINT_URL}/buckets/bucket-cameratraps/output/{Path(selected_rows[0]['filename']).name}"
+    else:
+        src = f"{S.S3_ENDPOINT_URL}/buckets/bucket-cameratraps/input/{Path(selected_rows[0]['filename']).name}"
+
     return html.Video(
-        src=f"{S.S3_ENDPOINT_URL}/buckets/bucket-cameratraps/output/{Path(selected_rows[0]['filename']).name}",
+        src=src,
         controls=True,
         autoPlay=True,
         style={
