@@ -205,10 +205,6 @@ app.layout = dmc.MantineProvider(
                                                     id="date-range-picker",
                                                     label="Date Range",
                                                     type="range",
-                                                    value=[
-                                                        datetime.now().date() - timedelta(days=7),
-                                                        datetime.now().date(),
-                                                    ],
                                                 ),
                                                 dmc.MultiSelect(
                                                     id="site-filter",
@@ -395,7 +391,6 @@ def set_preset_hours(dawn, day, night):
     Output("class-filter", "value"),
     Output("hour-range-slider", "value"),
     Input("reset-filters-btn", "n_clicks"),
-    prevent_initial_call=True,
 )
 def reset_filters(n_clicks: int):
     """Reset filters to default values"""
